@@ -8,4 +8,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\lib9c\.Libplanet\Libplanet\Libplanet.csproj" />
+    <ProjectReference Include="..\lib9c\Lib9c\Lib9c.csproj" />
+  </ItemGroup>
+
 </Project>
