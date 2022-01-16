@@ -31,6 +31,7 @@ namespace LieDown
                      await Task.Delay(300);
                      if (results.Any(x => x))
                      {
+                         Program.Nodes = nodeList.ToList();
                          dialogResult = DialogResult.OK;
                      }
                      else

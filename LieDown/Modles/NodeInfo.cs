@@ -35,8 +35,8 @@ namespace LieDown
         {
             try
             {
-                var wrap = await HttpUtils.PostAsync<NodeStatusWrap>(GraphqlServer, "{\"query\":\"query{nodeStatus{bootstrapEnded,preloadEnded,isMining,genesis{id,hash},topmostBlocks(limit: 1){index}}}\",\"variables\":{}}");
-                PreloadEnded = wrap.NodeStatus.PreloadEnded;
+                var wrap = await HttpUtils.PostAsync<NodeStatusWrap>(GraphqlServer, "{\"query\":\"query{nodeStatus{bootstrapEnded,preloadEnded,isMining,tip{index},genesis{id,hash}}}\"}");
+                PreloadEnded = wrap.NodeStatus.PreloadEnded;                
                 return PreloadEnded;
             }
             catch
@@ -45,6 +45,22 @@ namespace LieDown
             }
 
             return false;
+        }
+
+        public async Task<long> GetBlockIndexAsync() 
+        {
+            try {
+                var wrap = await HttpUtils.PostAsync<NodeStatusWrap>(GraphqlServer, "{\"query\":\"query{nodeStatus{preloadEnded,tip{index}}}\"}");
+                PreloadEnded = wrap.NodeStatus.PreloadEnded;
+                if (PreloadEnded) {
+                    return wrap.NodeStatus.Tip.Index;
+                }
+            }
+            catch 
+            {
+                PreloadEnded = false;
+            }
+            return  -1;
         }
 
         public async Task<int> GetRpcClientCountAsync()
@@ -59,16 +75,7 @@ namespace LieDown
             {
                 ClientCount=0;
             }
-
-            //using (var client = new GraphQLHttpClient(GraphqlServer, new NewtonsoftJsonSerializer()))
-            //{
-            //    var resp = await client.SendQueryAsync<RpcInformation>(new GraphQL.GraphQLRequest("{rpcInformation{totalCount}}"));
-            //    if (resp.Errors?.Length == 0)
-            //    {
-            //        ClientCount=resp.Data.TotalCount;
-            //        return ClientCount;
-            //    }
-            //}
+          
             return -1;
 
         }
@@ -121,11 +128,14 @@ namespace LieDown
 
         public Genesis Genesis { get; set; }
 
-        public Block[] TopmostBlocks { get; set; }
+        /// <summary>
+        /// top most block
+        /// </summary>
+        public Block Tip { get; set; }
 
         public class Block 
         { 
-            public int Index { get; set; }
+            public long Index { get; set; }
         
         }
 
