@@ -1,4 +1,5 @@
 using Libplanet.Crypto;
+using LieDown.Modles;
 
 namespace LieDown
 {
@@ -8,7 +9,7 @@ namespace LieDown
 
         public static List<NodeInfo> Nodes=new List<NodeInfo>();
 
-
+        public static Agent Agent;
 
         /// <summary>
         ///  The main entry point for the application.

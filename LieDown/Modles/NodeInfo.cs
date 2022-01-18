@@ -1,16 +1,14 @@
 ﻿using Libplanet.Blockchain;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using NineChroniclesActionType = Libplanet.Action.PolymorphicAction<Nekoyume.Action.ActionBase>;
-namespace LieDown
+namespace LieDown.Modles
 {
     public class NodeInfo
-    {       
-
-        public NodeInfo(){}
-        
+    {
         public string Host { get; set; }
 
         public int GraphqlPort { get; set; }
@@ -27,60 +25,79 @@ namespace LieDown
         public DateTime PreloadEndedUpdateAt { get; private set; }
 
         int _clientCount;
-        public int ClientCount { get { return _clientCount; } internal set { _clientCount = value;ClientCountUpateAt = DateTime.Now;  } }
+        public int ClientCount { get { return _clientCount; } internal set { _clientCount = value; ClientCountUpateAt = DateTime.Now; } }
 
         public DateTime ClientCountUpateAt { get; private set; }
+
+        public long PingDelay { get; set; }
 
         public async Task<bool> GetPreloadEndedAsync()
         {
             try
             {
                 var wrap = await HttpUtils.PostAsync<NodeStatusWrap>(GraphqlServer, "{\"query\":\"query{nodeStatus{bootstrapEnded,preloadEnded,isMining,tip{index},genesis{id,hash}}}\"}");
-                PreloadEnded = wrap.NodeStatus.PreloadEnded;                
+                PreloadEnded = wrap.NodeStatus.PreloadEnded;
                 return PreloadEnded;
             }
             catch
-            {                
+            {
                 PreloadEnded = false;
             }
 
             return false;
         }
 
-        public async Task<long> GetBlockIndexAsync() 
+        public async Task<long> GetBlockIndexAsync()
         {
-            try {
+            Stopwatch sw = new Stopwatch();
+            try
+            {
+                sw.Start();
                 var wrap = await HttpUtils.PostAsync<NodeStatusWrap>(GraphqlServer, "{\"query\":\"query{nodeStatus{preloadEnded,tip{index}}}\"}");
                 PreloadEnded = wrap.NodeStatus.PreloadEnded;
-                if (PreloadEnded) {
+                if (PreloadEnded)
+                {
                     return wrap.NodeStatus.Tip.Index;
                 }
             }
-            catch 
+            catch
             {
                 PreloadEnded = false;
             }
-            return  -1;
+            finally
+            {
+                sw.Stop();
+                PingDelay = sw.ElapsedMilliseconds;
+            }
+            return -1;
         }
 
         public async Task<int> GetRpcClientCountAsync()
         {
+            Stopwatch sw = new Stopwatch();
             try
             {
-                var wrap = await HttpUtils.PostAsync<RpcInformationWrap>(GraphqlServer, "{\"query\":\"query{rpcInformation{totalCount}}\",\"variables\":{}}");
+
+                sw.Start();
+                var wrap = await HttpUtils.PostAsync<RpcInformationWrap>(GraphqlServer, "{\"query\":\"query{rpcInformation{totalCount}}\"}");
                 ClientCount = wrap.RpcInformation.TotalCount;
                 return ClientCount;
             }
             catch
             {
-                ClientCount=0;
+                ClientCount = 0;
             }
-          
+            finally
+            {
+                sw.Stop();
+                PingDelay = sw.ElapsedMilliseconds;
+            }
+
             return -1;
 
         }
 
-        public static IEnumerable<NodeInfo> GetDefaultNodeList()         
+        public static IEnumerable<NodeInfo> GetDefaultNodeList()
         {
             var list = new string[] {
        "aba105ce4868747839ab806175be8b37-13503424.us-east-2.elb.amazonaws.com,80,31238",
@@ -103,21 +120,22 @@ namespace LieDown
       "a6b8aa8271d6946ea998b110863cbfb9-1918498264.us-east-2.elb.amazonaws.com,80,31238",
       "ae4fa84e10d214209ad600a77371223a-1562070758.us-east-2.elb.amazonaws.com,80,31238",
       "af7640523846d4152b45b33076a5629d-1374793070.us-east-2.elb.amazonaws.com,80,31238",
-            }.Select(x => {
+            }.Select(x =>
+            {
                 var rawInfos = x.Split(',');
-               return new NodeInfo()
+                return new NodeInfo()
                 {
                     Host = rawInfos[0],
                     GraphqlPort = int.Parse(rawInfos[1]),
                     RpcPort = int.Parse(rawInfos[2])
                 };
-            });
+            }).ToList();
             return list;
         }
 
     }
 
-    public class NodeStatus 
+    public class NodeStatus
     {
 
         public bool BootstrapEnded { get; set; }
@@ -133,10 +151,10 @@ namespace LieDown
         /// </summary>
         public Block Tip { get; set; }
 
-        public class Block 
-        { 
+        public class Block
+        {
             public long Index { get; set; }
-        
+
         }
 
 
@@ -144,22 +162,21 @@ namespace LieDown
 
     public class Genesis
     {
-        public string   ID { get; set; }
+        public string ID { get; set; }
         public string Hash { get; set; }
     }
-    public class NodeStatusWrap 
-    { 
-    public NodeStatus NodeStatus { get; set; }
-
+    public class NodeStatusWrap
+    {
+        public NodeStatus NodeStatus { get; set; }
     }
 
-    public class RpcInformation 
+    public class RpcInformation
     {
         public int TotalCount { get; set; }
     }
 
-    public class RpcInformationWrap { 
-    
+    public class RpcInformationWrap
+    {
         public RpcInformation RpcInformation { get; set; }
     }
 

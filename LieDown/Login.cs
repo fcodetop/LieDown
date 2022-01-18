@@ -33,7 +33,7 @@ namespace LieDown
             lbl_Tips.Visible = false;
 
         }
-        private void btn_Login_Click(object sender, EventArgs e)
+        private async void btn_Login_Click(object sender, EventArgs e)
         {
             try
             {
@@ -47,6 +47,10 @@ namespace LieDown
                 }
                 var privateKey = ppk.Unprotect(txt_Pass.Text);
                 Program.PrivateKey = privateKey;
+
+                var node = Program.Nodes.Where(x => x.PreloadEnded).OrderBy(x => x.PingDelay).FirstOrDefault();
+                var agent = await Modles.Agent.GetAgent(node,ppk.Address.ToString());
+                Program.Agent= agent;
                 this.DialogResult = DialogResult.OK;
             }
             catch (IncorrectPassphraseException)

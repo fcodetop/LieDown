@@ -37,7 +37,7 @@ namespace LieDown
                 Content = new StringContent(postJson, Encoding.UTF8, "application/json")
             };
             using var httpResponseMessage = await client.SendAsync(httpRequestMessage);
-            var content = await httpResponseMessage.Content.ReadAsStringAsync();
+            var content = await httpResponseMessage.Content.ReadAsStringAsync();          
             if (httpResponseMessage.IsSuccessStatusCode)
             {
                 try
