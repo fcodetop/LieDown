@@ -135,6 +135,41 @@ namespace LieDown.Modles
 
     }
 
+    public static class NodeInfoExtensions
+    {
+        public static async Task<TransactionResult> GetTransactionResultAsync(this NodeInfo node, string txId) 
+        {
+
+            var wrap = await HttpUtils.PostAsync<TransactionResultWrap>(node.GraphqlServer, "{\"query\":\"query{transaction{transactionResult(txId:\\\""+txId+"\\\"){txStatus,blockIndex,blockHash}}}\"}");
+            return wrap.Transaction;
+        }
+    }
+
+    public class TransactionResultWrap
+    {
+        public TransactionResult Transaction { get; set; }
+    }
+
+    public class TransactionResult
+    {
+        public TxStatus TxStatus { get; set; }
+        public long BlockIndex { get; set; }
+        public string BlockHash { get; set; }
+    }
+
+    public enum TxStatus
+    {
+        //  The Transaction doesn't staged or invalid.
+        INVALID,
+        // The Transaction do not executed yet.
+        STAGING,
+        // The Transaction is success.
+        SUCCESS,
+        // The Transaction is failure.
+        FAILURE
+
+    }
+
     public class NodeStatus
     {
 
