@@ -32,8 +32,10 @@ namespace LieDown.Modles
 
         public async Task<bool> GetPreloadEndedAsync()
         {
+            Stopwatch sw = new Stopwatch();
             try
             {
+                sw.Start();
                 var wrap = await HttpUtils.PostAsync<NodeStatusWrap>(GraphqlServer, "{\"query\":\"query{nodeStatus{bootstrapEnded,preloadEnded,isMining,tip{index},genesis{id,hash}}}\"}");
                 PreloadEnded = wrap.NodeStatus.PreloadEnded;
                 return PreloadEnded;
@@ -42,21 +44,26 @@ namespace LieDown.Modles
             {
                 PreloadEnded = false;
             }
+            finally
+            {
+                sw.Stop();
+                PingDelay = sw.ElapsedMilliseconds;
+            }
 
             return false;
         }
 
-        public async Task<long> GetBlockIndexAsync()
+        public async Task<NodeStatus.Block> GetBlockIndexAsync()
         {
             Stopwatch sw = new Stopwatch();
             try
             {
                 sw.Start();
-                var wrap = await HttpUtils.PostAsync<NodeStatusWrap>(GraphqlServer, "{\"query\":\"query{nodeStatus{preloadEnded,tip{index}}}\"}");
+                var wrap = await HttpUtils.PostAsync<NodeStatusWrap>(GraphqlServer, "{\"query\":\"query{nodeStatus{preloadEnded,tip{index,hash,id}}}\"}");
                 PreloadEnded = wrap.NodeStatus.PreloadEnded;
                 if (PreloadEnded)
                 {
-                    return wrap.NodeStatus.Tip.Index;
+                    return wrap.NodeStatus.Tip;
                 }
             }
             catch
@@ -68,7 +75,7 @@ namespace LieDown.Modles
                 sw.Stop();
                 PingDelay = sw.ElapsedMilliseconds;
             }
-            return -1;
+            return new NodeStatus.Block();
         }
 
         public async Task<int> GetRpcClientCountAsync()
@@ -188,7 +195,9 @@ namespace LieDown.Modles
         public class Block
         {
             public long Index { get; set; }
+            public string Hash { get; set; } 
 
+            public string Id { get; set; }
         }
 
 
