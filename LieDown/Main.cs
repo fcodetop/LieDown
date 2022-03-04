@@ -58,7 +58,7 @@ namespace LieDown
         }
 
         private async void Main_Load(object sender, EventArgs e)
-        { 
+        {
             ConnectRpc();
             _topBlock = await Node.GetBlockIndexAsync();
 
@@ -70,31 +70,31 @@ namespace LieDown
             var characterSheetAddr = Nekoyume.Addresses.GetSheetAddress<CharacterSheet>();
             var costumeStatSheetAddr = Nekoyume.Addresses.GetSheetAddress<CostumeStatSheet>();
 
-            var csv = await GetStateAsync(characterSheetAddr);            
-             _characterSheet.Set(csv.ToDotnetString());
+            var csv = await GetStateAsync(characterSheetAddr);
+            _characterSheet.Set(csv.ToDotnetString());
 
-            csv = await GetStateAsync(costumeStatSheetAddr);            
+            csv = await GetStateAsync(costumeStatSheetAddr);
             _costumeStatSheet.Set(csv.ToDotnetString());
-           
+
 
             _avatars = await GetAvatayrStates(Program.Agent.AvatarStates.Select(x => new Address(x.AvatarAddress.Remove(0, 2))));
-            foreach (var state in _avatars) {
-                _cps[state.Key] = GetCP(state.Value);            
+            foreach (var state in _avatars)
+            {
+                _cps[state.Key] = GetCP(state.Value);
             }
 
             BindBlock();
             BindAvatar();
 
-            _arenaHelper = new Nekoyume.ArenaHelper(GameConfigState);            
+            _arenaHelper = new Nekoyume.ArenaHelper(GameConfigState);
 
             var task = new Task(async () =>
               {
-              while (!this.Disposing)
-              {
-
-                  await Task.Delay(1000*60*3);
+                  while (!this.Disposing)
+                  {
+                      await Task.Delay(5000);
                       await ComfirmTx();
-                      await GetData();                    
+                      await GetData();
 
                   }
               });
@@ -103,7 +103,8 @@ namespace LieDown
             {
                 while (!this.Disposing)
                 {
-                    await Task.Delay(50000);                   
+                    await Task.Delay(1000 * 60 * 3);
+
                     await WeeklyArena();
 
                 }
@@ -118,16 +119,16 @@ namespace LieDown
         }
 
 
-        private long _resetIndex;
+        private long _resetIndex=0;
         WeeklyArenaState _weeklyArenaState;
         
 
         private async Task WeeklyArena() 
         {
-
-            if (_topBlock.Index <= _resetIndex)
+            if (_resetIndex < 0 && _topBlock.Index > _resetIndex + GameConfigState.DailyArenaInterval) 
             {
-                return;            
+                //next interval
+                _resetIndex = 0;
             }
 
             if (_arenaHelper.TryGetThisWeekAddress(_topBlock.Index, out var address))
@@ -142,7 +143,6 @@ namespace LieDown
                     }
                 }
 
-
                 if (_resetIndex > 0)
                 {
 
@@ -150,7 +150,7 @@ namespace LieDown
                     if (arenaInfo.DailyChallengeCount > 0)
                     {
                         //delay 800 blocks
-                        if ((GameConfigState.DailyArenaInterval + _topBlock.Index - _resetIndex) < 800)
+                        if ((_topBlock.Index  - _resetIndex) < 800)
                         {
                             return;
                         }                        
@@ -330,34 +330,41 @@ namespace LieDown
             await CloesRpc();
         }
 
+        private SemaphoreSlim _singleTran = new SemaphoreSlim(1);
         private async Task<bool> MakeTransaction(List<NCAction> actions)
         {
-            var nonce = await GetNonceAsync();
-            var tx = NCTx.Create(
-                nonce,
-                Program.PrivateKey,
-               GenesisHash,
-                actions
-            );
-            if (_StageTxs.TryAdd(GetHashCode(actions), tx.Id))
+            try
             {
-                try
+                await _singleTran.WaitAsync();
+                var nonce = await GetNonceAsync();
+                var tx = NCTx.Create(
+                    nonce,
+                    Program.PrivateKey,
+                   GenesisHash,
+                    actions
+                );
+                if (_StageTxs.TryAdd(GetHashCode(actions), tx.Id))
                 {
-                    var result = await _service.PutTransaction(tx.Serialize(true));
-                    if (!result)
-                        throw new Exception();
-                    return result;
+                    try
+                    {
+                        var result = await _service.PutTransaction(tx.Serialize(true));
+                        if (!result)
+                            throw new Exception("PutTransaction return false");
+                        return result;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(ex);
+                        _StageTxs.TryRemove(new KeyValuePair<int, TxId>(GetHashCode(actions), tx.Id));
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex);
-                    _StageTxs.TryRemove(new KeyValuePair<int, TxId>(GetHashCode(actions), tx.Id));
-                    throw;
-                }
+
+                return false;
             }
-
-            return false;
-
+            finally
+            {
+                _singleTran.Release();
+            }
         }
 
         private async Task<bool> IsTransactionStaged(TxId txId) { 
@@ -381,17 +388,16 @@ namespace LieDown
                 {
                     try
                     {
-                        //var result = await Node.GetTransactionResultAsync(tx.ToString());
-                        //if (result.TxStatus == TxStatus.FAILURE || result.TxStatus == TxStatus.SUCCESS)
-                        //{
-                        //    _StageTxs.TryRemove(key, out var _);
-                        //}
-
-                        if (!await IsTransactionStaged(tx))
+                        var result = await Node.GetTransactionResultAsync(tx.ToString());
+                        if (result.TxStatus == TxStatus.FAILURE || result.TxStatus == TxStatus.SUCCESS)
                         {
-                             var result = await Node.GetTransactionResultAsync(tx.ToString());
                             _StageTxs.TryRemove(key, out var _);
                         }
+
+                        //if (!await IsTransactionStaged(tx))
+                        //{                        
+                        //    _StageTxs.TryRemove(key, out var _);
+                        //}
 
                     }
                     catch (Exception ex)

@@ -23,7 +23,6 @@ namespace LieDown
             {
                 return;
             }
-
             var login = new Login();
             if (login.ShowDialog() == DialogResult.OK)
             {

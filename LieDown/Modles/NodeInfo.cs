@@ -147,14 +147,21 @@ namespace LieDown.Modles
         {
 
             var wrap = await HttpUtils.PostAsync<TransactionResultWrap>(node.GraphqlServer, "{\"query\":\"query{transaction{transactionResult(txId:\\\""+txId+"\\\"){txStatus,blockIndex,blockHash}}}\"}");
-            return wrap.Transaction;
+            return wrap.Transaction.TransactionResult;
         }
     }
 
     public class TransactionResultWrap
     {
-        public TransactionResult Transaction { get; set; }
+       public Transaction Transaction { get; set; }
     }
+
+    public class Transaction
+    {
+        public TransactionResult TransactionResult { get; set; }
+    }
+
+
 
     public class TransactionResult
     {
