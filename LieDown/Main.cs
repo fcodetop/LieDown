@@ -153,12 +153,7 @@ namespace LieDown
                 if (state != null)
                 {
                   var  weeklyArenaState = new WeeklyArenaState(state);
-                    _resetIndex = weeklyArenaState.ResetIndex;
-                    //delay 800 blocks
-                    if ((_topBlock.Index - _resetIndex) < 1400)
-                    {
-                        return;
-                    }
+                    _resetIndex = weeklyArenaState.ResetIndex;                   
                     var arenaInfo = weeklyArenaState.GetArenaInfo(new Address(avatar.AvatarAddress.Remove(0, 2)));
                     if (arenaInfo.DailyChallengeCount <= 0)
                     {
@@ -167,7 +162,12 @@ namespace LieDown
                     }
                     else
                     {
-                         action.weeklyArenaAddress = address;
+                        //delay 800 blocks
+                        if ((_topBlock.Index - _resetIndex) < 1400)
+                        {
+                            return;
+                        }
+                        action.weeklyArenaAddress = address;
 
                         //offical rule
                         //var infos2 = _weeklyArenaState.GetArenaInfos(arenaInfo.AvatarAddress, 90, 10);
