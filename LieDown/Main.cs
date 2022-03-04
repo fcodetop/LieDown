@@ -112,6 +112,7 @@ namespace LieDown
                 }
             });
             task1.Start();
+            log.Info("start avatar{0}", avatar.AvatarAddress);
 
         }
 
@@ -122,47 +123,51 @@ namespace LieDown
 
 
         private long _resetIndex=0;
-        WeeklyArenaState _weeklyArenaState;
-        
+        private bool challengeEnd=false;
 
-        private async Task WeeklyArena() 
-        {
-            if (_resetIndex < 0 && _topBlock.Index > _resetIndex + GameConfigState.DailyArenaInterval) 
+        private async Task WeeklyArena()
+        {            
+            if (_resetIndex > 0 && _topBlock.Index > _resetIndex + GameConfigState.DailyArenaInterval)
             {
                 //next interval
-                _resetIndex = 0;
+                challengeEnd = false;
+            }
+            if (challengeEnd) 
+            {
+                return;
+            }
+            //delay 800 blocks
+            if ((_topBlock.Index - _resetIndex) < 1400)
+            {
+                return;
+            }
+             var action = new RankingBattle { avatarAddress = new Address(avatar.AvatarAddress.Remove(0, 2)) };
+            if (_StageTxs.ContainsKey(GetHashCode(new List<NCAction>() { action })))
+            {
+                return;
             }
 
             if (_arenaHelper.TryGetThisWeekAddress(_topBlock.Index, out var address))
             {
-                if (_resetIndex == 0)
+                var state = await GetStateAsync(address);
+                if (state != null)
                 {
-                    var state = await GetStateAsync(address);
-                    if (state != null)
+                  var  weeklyArenaState = new WeeklyArenaState(state);
+                    _resetIndex = weeklyArenaState.ResetIndex;
+                    //delay 800 blocks
+                    if ((_topBlock.Index - _resetIndex) < 1400)
                     {
-                        _weeklyArenaState = new WeeklyArenaState(state);
-                        _resetIndex = _weeklyArenaState.ResetIndex;
+                        return;
                     }
-                }
-
-                if (_resetIndex > 0)
-                {
-
-                    var arenaInfo = _weeklyArenaState.GetArenaInfo(new Address(avatar.AvatarAddress.Remove(0, 2)));
-                    if (arenaInfo.DailyChallengeCount > 0)
+                    var arenaInfo = weeklyArenaState.GetArenaInfo(new Address(avatar.AvatarAddress.Remove(0, 2)));
+                    if (arenaInfo.DailyChallengeCount <= 0)
                     {
-                        //delay 800 blocks
-                        if ((_topBlock.Index  - _resetIndex) < 800)
-                        {
-                            return;
-                        }                        
-
-                        var action = new RankingBattle { avatarAddress = arenaInfo.AvatarAddress };
-                        action.weeklyArenaAddress = address;
-                        if (_StageTxs.ContainsKey(GetHashCode(new List<NCAction>() { action })))
-                        {
-                            return;
-                        }
+                        log.Info("DailyChallengeEnd Avatar:{0}", avatar.AvatarAddress);
+                        challengeEnd=true;
+                    }
+                    else
+                    {
+                         action.weeklyArenaAddress = address;
 
                         //offical rule
                         //var infos2 = _weeklyArenaState.GetArenaInfos(arenaInfo.AvatarAddress, 90, 10);
@@ -173,7 +178,7 @@ namespace LieDown
                         //    infos2 = _weeklyArenaState.GetArenaInfos(last, 90, 0);
                         //}
 
-                        var infos2 = _weeklyArenaState.OrderedArenaInfos;
+                        var infos2 = weeklyArenaState.OrderedArenaInfos;
 
                         Address enemyAddress = default(Address);
                         int minCP = int.MaxValue;
@@ -193,8 +198,8 @@ namespace LieDown
                                 cp = GetCP(avatarState);
                                 _cps[info.AvatarAddress] = cp; //cache cp
                             }
-                           
-                            if (_cps[arenaInfo.AvatarAddress] >= cp * 1.1)
+
+                            if (_cps[arenaInfo.AvatarAddress] >= cp * 1.18)
                             {
                                 enemyAddress = info.AvatarAddress;
                                 break;
@@ -210,6 +215,7 @@ namespace LieDown
                             action.enemyAddress = enemyAddress;
                             action.costumeIds = _avatars[arenaInfo.AvatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList();
                             action.equipmentIds = _avatars[arenaInfo.AvatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+
                             TryRankingBattle(action);
                         }
 
@@ -217,7 +223,7 @@ namespace LieDown
                 }
                 else
                 {
-                    log.Warn("WeeklyArenaState is null");                   
+                    log.Warn("WeeklyArenaState is null");
                 }
             }
 
@@ -394,7 +400,10 @@ namespace LieDown
                         var result = await Node.GetTransactionResultAsync(tx.ToString());
                         if (result.TxStatus == TxStatus.FAILURE || result.TxStatus == TxStatus.SUCCESS)
                         {
-                            _StageTxs.TryRemove(key, out var _);
+                            if (_StageTxs.TryRemove(key, out  tx)&& result.TxStatus == TxStatus.SUCCESS) 
+                            { 
+                                //complete tx
+                            }
                         }
 
                         //if (!await IsTransactionStaged(tx))

@@ -21,7 +21,7 @@ namespace LieDown
             ApplicationConfiguration.Initialize();
             var config = new NLog.Config.LoggingConfiguration();
             // Targets where to log to: File and Console
-            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = "./logs/{shortdate}.log" }; 
+            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = $"./logs/ld.log",ConcurrentWrites=true,ArchiveAboveSize=1024*1024*5,ArchiveNumbering= NLog.Targets.ArchiveNumberingMode.DateAndSequence }; 
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
             // Apply config           
             NLog.LogManager.Configuration = config;
