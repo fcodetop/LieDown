@@ -44,6 +44,8 @@
             this.label14 = new System.Windows.Forms.Label();
             this.label15 = new System.Windows.Forms.Label();
             this.lblName = new System.Windows.Forms.Label();
+            this.lblCP = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -190,11 +192,31 @@
             this.lblName.TabIndex = 1;
             this.lblName.Text = "player";
             // 
+            // lblCP
+            // 
+            this.lblCP.AutoSize = true;
+            this.lblCP.Location = new System.Drawing.Point(306, 23);
+            this.lblCP.Name = "lblCP";
+            this.lblCP.Size = new System.Drawing.Size(15, 17);
+            this.lblCP.TabIndex = 5;
+            this.lblCP.Text = "0";
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(274, 23);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(26, 17);
+            this.label5.TabIndex = 4;
+            this.label5.Text = "CP:";
+            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(693, 480);
+            this.Controls.Add(this.lblCP);
+            this.Controls.Add(this.label5);
             this.Controls.Add(this.lblBlockDev);
             this.Controls.Add(this.label14);
             this.Controls.Add(this.lblBlock);
@@ -239,6 +261,8 @@
         private Label label14;
         private Label label15;
         private Label lblName;
+        private Label lblCP;
+        private Label label5;
     }
 }
 

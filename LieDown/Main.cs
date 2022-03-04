@@ -1,4 +1,5 @@
 ﻿using Bencodex;
+using Bencodex.Types;
 using Grpc.Core;
 using Libplanet;
 using Libplanet.Action;
@@ -7,7 +8,9 @@ using Libplanet.Tx;
 using LieDown.Modles;
 using MagicOnion.Client;
 using Nekoyume.Action;
+using Nekoyume.Model.State;
 using Nekoyume.Shared.Services;
+using Nekoyume.TableData;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -27,40 +30,211 @@ namespace LieDown
     public partial class Main : Form
     {
         private readonly static BlockHash GenesisHash = BlockHash.FromString("4582250d0da33b06779a8475d283d5dd210c683b9b999d74d03fac4f58fa6bce");
-        private Character avatar = Program.Agent.AvatarStates[0];
+        private Character avatar = Program.Agent.AvatarStates.MaxBy(x=>x.Level);
         public Address Address => Program.PrivateKey.PublicKey.ToAddress();
         private NodeInfo Node;
         private Channel _channel;
         private IBlockChainService _service;
         private Codec _codec = new Codec();
+        private NodeStatus.Block _topBlock;
+        public static GameConfigState GameConfigState;
+
+        private CharacterSheet _characterSheet = new CharacterSheet();
+        private CostumeStatSheet _costumeStatSheet = new CostumeStatSheet();
+
+        private Nekoyume.ArenaHelper _arenaHelper;
+
+        Dictionary<Address, AvatarState> _avatars = new Dictionary<Address, AvatarState>();
+        Dictionary<Address,int> _cps=   new Dictionary<Address,int>();
+
 
         private ConcurrentDictionary<int, TxId> _StageTxs = new ConcurrentDictionary<int, TxId>();
+
 
         public Main()
         {
             InitializeComponent();
-            Node = Program.Nodes.Where(x => x.PreloadEnded).MaxBy(x => x.PingDelay);
+            Node = Program.Nodes.Where(x => x.PreloadEnded).MinBy(x => x.PingDelay);
         }
 
         private async void Main_Load(object sender, EventArgs e)
-        {
-            var topBlock = await Node.GetBlockIndexAsync();
+        { 
+            ConnectRpc();
+            _topBlock = await Node.GetBlockIndexAsync();
+
+            if (await GetStateAsync(GameConfigState.Address) is Dictionary configDict)
+            {
+                GameConfigState = new GameConfigState(configDict);
+            }
+
+            var characterSheetAddr = Nekoyume.Addresses.GetSheetAddress<CharacterSheet>();
+            var costumeStatSheetAddr = Nekoyume.Addresses.GetSheetAddress<CostumeStatSheet>();
+
+            var csv = await GetStateAsync(characterSheetAddr);            
+             _characterSheet.Set(csv.ToDotnetString());
+
+            csv = await GetStateAsync(costumeStatSheetAddr);            
+            _costumeStatSheet.Set(csv.ToDotnetString());
+           
+
+            _avatars = await GetAvatayrStates(Program.Agent.AvatarStates.Select(x => new Address(x.AvatarAddress.Remove(0, 2))));
+            foreach (var state in _avatars) {
+                _cps[state.Key] = GetCP(state.Value);            
+            }
+
+            BindBlock();
             BindAvatar();
-            BindBlock(topBlock);
+
+            _arenaHelper = new Nekoyume.ArenaHelper(GameConfigState);            
 
             var task = new Task(async () =>
               {
-                  while (!this.Disposing)
-                  {
-                      await Task.Delay(5000);
-                      await Task.WhenAll(GetData(), ComfirmTx());
+              while (!this.Disposing)
+              {
+
+                  await Task.Delay(1000*60*3);
+                      await ComfirmTx();
+                      await GetData();                    
+
                   }
               });
             task.Start();
+            var task1 = new Task(async () =>
+            {
+                while (!this.Disposing)
+                {
+                    await Task.Delay(50000);                   
+                    await WeeklyArena();
 
-            ConnectRpc();
+                }
+            });
+            task1.Start();
 
         }
+
+        public  int GetCP( AvatarState avatarState)
+        {           
+            return Nekoyume.Battle.CPHelper.GetCPV2(avatarState, _characterSheet, _costumeStatSheet);
+        }
+
+
+        private long _resetIndex;
+        WeeklyArenaState _weeklyArenaState;
+        
+
+        private async Task WeeklyArena() 
+        {
+
+            if (_topBlock.Index <= _resetIndex)
+            {
+                return;            
+            }
+
+            if (_arenaHelper.TryGetThisWeekAddress(_topBlock.Index, out var address))
+            {
+                if (_resetIndex == 0)
+                {
+                    var state = await GetStateAsync(address);
+                    if (state != null)
+                    {
+                        _weeklyArenaState = new WeeklyArenaState(state);
+                        _resetIndex = _weeklyArenaState.ResetIndex;
+                    }
+                }
+
+
+                if (_resetIndex > 0)
+                {
+
+                    var arenaInfo = _weeklyArenaState.GetArenaInfo(new Address(avatar.AvatarAddress.Remove(0, 2)));
+                    if (arenaInfo.DailyChallengeCount > 0)
+                    {
+                        //delay 800 blocks
+                        if ((GameConfigState.DailyArenaInterval + _topBlock.Index - _resetIndex) < 800)
+                        {
+                            return;
+                        }                        
+
+                        var action = new RankingBattle { avatarAddress = arenaInfo.AvatarAddress };
+                        action.weeklyArenaAddress = address;
+                        if (_StageTxs.ContainsKey(GetHashCode(new List<NCAction>() { action })))
+                        {
+                            return;
+                        }
+
+                        //offical rule
+                        //var infos2 = _weeklyArenaState.GetArenaInfos(arenaInfo.AvatarAddress, 90, 10);
+                        //// Player does not play prev & this week arena.
+                        //if (!infos2.Any() && _weeklyArenaState.OrderedArenaInfos.Any())
+                        //{
+                        //    var last = _weeklyArenaState.OrderedArenaInfos.Last().AvatarAddress;
+                        //    infos2 = _weeklyArenaState.GetArenaInfos(last, 90, 0);
+                        //}
+
+                        var infos2 = _weeklyArenaState.OrderedArenaInfos;
+
+                        Address enemyAddress = default(Address);
+                        int minCP = int.MaxValue;
+                        foreach (var info in infos2) //auto match
+                        {
+                            if (!info.Active)
+                                continue;
+                            int cp;
+
+                            if (_cps.ContainsKey(info.AvatarAddress))
+                            {
+                                cp = _cps[info.AvatarAddress];
+                            }
+                            else
+                            {
+                                var avatarState = (await GetAvatayrStates(new List<Address>() { info.AvatarAddress })).FirstOrDefault().Value;
+                                cp = GetCP(avatarState);
+                                _cps[info.AvatarAddress] = cp; //cache cp
+                            }
+                           
+                            if (_cps[arenaInfo.AvatarAddress] >= cp * 1.1)
+                            {
+                                enemyAddress = info.AvatarAddress;
+                                break;
+                            }
+                            if (cp < minCP)
+                            {
+                                minCP = cp;
+                                enemyAddress = info.AvatarAddress;
+                            }
+                        }
+                        if (enemyAddress != default(Address))
+                        {
+                            action.enemyAddress = enemyAddress;
+                            action.costumeIds = _avatars[arenaInfo.AvatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+                            action.equipmentIds = _avatars[arenaInfo.AvatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+                            TryRankingBattle(action);
+                        }
+
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine("WeeklyArenaState is null");
+                }
+            }
+
+        }
+       
+
+        public async Task<Dictionary<Address, AvatarState>> GetAvatayrStates(IEnumerable<Address> addressList)
+        {
+            Dictionary<byte[], byte[]> raw =
+                await _service.GetAvatarStates(addressList.Select(a => a.ToByteArray()),
+                    BlockHash.FromString(_topBlock.Hash).ToByteArray());
+            var result = new Dictionary<Address, AvatarState>();
+            foreach (var kv in raw)
+            {
+                result[new Address(kv.Key)] = new AvatarState((Dictionary)_codec.Decode(kv.Value));
+            }
+            return result;
+        }
+
 
         private void ConnectRpc()
         {
@@ -94,9 +268,13 @@ namespace LieDown
                  {
                      if (await preloadEnded)
                      {
+
                          await Node.GetBlockIndexAsync()
-                         .ContinueWith(async (topBlock) => BindBlock(await topBlock))
-                         .ContinueWith(async (x) => avatar = await Character.GetCharacterAync(Node, avatar.AvatarAddress));
+                         .ContinueWith(async (topBlock) => { _topBlock = await topBlock; BindBlock(); }) 
+                         .ContinueWith(async (x) => {
+                             avatar = await Character.GetCharacterAync(Node, avatar.AvatarAddress);
+                             BindAvatar();
+                         });
                          loopNode = false;
                          if(isNewConn)
                              ConnectRpc();
@@ -120,23 +298,26 @@ namespace LieDown
                 lblExp.Text = avatar.Exp.ToString();
                 lblLevel.Text = avatar.Level.ToString();
                 lblName.Text = avatar.Name;
+                var key = new Address(avatar.AvatarAddress.Remove(0, 2));
+                if (_cps.ContainsKey(key))
+                    lblCP.Text = _cps[key].ToString();
                 lblStage.Text = (avatar.StageMap.Pairs.Where(x => x[0] < 10000001).Max(x => x[0]) + 1).ToString();
             });
         }
 
-        private void BindBlock(long topBlock)
+        private  void BindBlock()
         {
-            this.Invoke(() =>
+            long topBlock = _topBlock.Index;
+            this.Invoke( () =>
             {
                 lblBlock.Text = topBlock.ToString();
                 var meter = topBlock - avatar.DailyRewardReceivedIndex;
                 if (meter >= 1700)
                 {
                     meter = 1700;
-                    if (avatar.ActionPoint == 0) 
-                    { 
-                      //auto add AP
-
+                    if (avatar.ActionPoint == 0&& _service!=null) 
+                    {
+                       TryDailyReward();
                     }
                 }
                 lblPMeter.Text = $"{meter}/1700";
@@ -149,7 +330,7 @@ namespace LieDown
             await CloesRpc();
         }
 
-        private async Task MakeTransaction(List<NCAction> actions)
+        private async Task<bool> MakeTransaction(List<NCAction> actions)
         {
             var nonce = await GetNonceAsync();
             var tx = NCTx.Create(
@@ -158,10 +339,39 @@ namespace LieDown
                GenesisHash,
                 actions
             );
-          
-            await _service.PutTransaction(tx.Serialize(true));
-            _StageTxs.TryAdd(GetHashCode(actions), tx.Id);
+            if (_StageTxs.TryAdd(GetHashCode(actions), tx.Id))
+            {
+                try
+                {
+                    var result = await _service.PutTransaction(tx.Serialize(true));
+                    if (!result)
+                        throw new Exception();
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                    _StageTxs.TryRemove(new KeyValuePair<int, TxId>(GetHashCode(actions), tx.Id));
+                    throw;
+                }
+            }
+
+            return false;
+
         }
+
+        private async Task<bool> IsTransactionStaged(TxId txId) { 
+        
+            return await _service.IsTransactionStaged(txId.ToByteArray());
+        }
+
+
+        public async Task<IValue> GetStateAsync(Address address)
+        {
+            byte[] raw = await _service.GetState(address.ToByteArray(), BlockHash.FromString(_topBlock.Hash).ToByteArray());
+            return _codec.Decode(raw);
+        }
+
 
         private async Task ComfirmTx() 
         {
@@ -171,11 +381,18 @@ namespace LieDown
                 {
                     try
                     {
-                        var result = await Node.GetTransactionResultAsync(tx.ToString());
-                        if (result.TxStatus == TxStatus.FAILURE || result.TxStatus == TxStatus.SUCCESS)
+                        //var result = await Node.GetTransactionResultAsync(tx.ToString());
+                        //if (result.TxStatus == TxStatus.FAILURE || result.TxStatus == TxStatus.SUCCESS)
+                        //{
+                        //    _StageTxs.TryRemove(key, out var _);
+                        //}
+
+                        if (!await IsTransactionStaged(tx))
                         {
+                             var result = await Node.GetTransactionResultAsync(tx.ToString());
                             _StageTxs.TryRemove(key, out var _);
                         }
+
                     }
                     catch (Exception ex)
                     {
@@ -196,14 +413,24 @@ namespace LieDown
             return await _service.GetNextTxNonce( Address.ToByteArray());
         }
 
-        public async Task TryDailyReward() 
+        public async void TryDailyReward() 
         {
             var action = new DailyReward
             {
-                avatarAddress =Address,
+                avatarAddress =new Address(avatar.AvatarAddress.Remove(0,2))
             };
             var actions = new List<NCAction> { action };
             if (_StageTxs.ContainsKey(GetHashCode( actions)) )
+            {
+                return;
+            }
+            await MakeTransaction(actions);
+        }
+
+        public async void TryRankingBattle(RankingBattle action)
+        {         
+            var actions = new List<NCAction> { action };
+            if (_StageTxs.ContainsKey(GetHashCode(actions)))
             {
                 return;
             }

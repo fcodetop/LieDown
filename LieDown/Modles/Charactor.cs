@@ -14,7 +14,7 @@ namespace LieDown.Modles
         public string AgentAddress { get; set; }
         public string RankingMapAddress { get; set; }
         public string Name { get; set; }
-        public string Level { get; set; }
+        public int Level { get; set; }
         public int Exp { get; set; }
         [Newtonsoft.Json.JsonIgnore]
         public int Pmeter { get; set; }
@@ -24,6 +24,9 @@ namespace LieDown.Modles
 
         public ColletionMap StageMap { get; set; }
 
+        [Newtonsoft.Json.JsonIgnore]
+        public int CP { get; set; }
+
         public class ColletionMap { 
         
             public int Count { get; set; }
@@ -32,7 +35,7 @@ namespace LieDown.Modles
 
         public async static Task<Character> GetCharacterAync(NodeInfo node,string avatarAddress) 
         {           
-           var wrap = await HttpUtils.PostAsync<StateQueryWrap>(node.GraphqlServer, "{\"query\":\"query{stateQuery{avatar(avatarAddress:\\\""+ avatarAddress + "\\\"){actionPoint,address,agentAddress,rankingMapAddress,name,level,exp,dailyRewardReceivedIndex,updatedAt,stageMap{count,pairs}}}}\"}");
+           var wrap = await HttpUtils.PostAsync<StateQueryWrap>(node.GraphqlServer, "{\"query\":\"query{stateQuery{avatar(avatarAddress:\\\""+ avatarAddress + "\\\"){actionPoint,address,agentAddress,name,level,exp,dailyRewardReceivedIndex,updatedAt,stageMap{count,pairs}}}}\"}");
             return wrap.StateQuery.Avatar;
         }
 
@@ -62,7 +65,7 @@ namespace LieDown.Modles
 
         public async static Task<Agent> GetAgent(NodeInfo node, string address)
         {
-            var wrap = await HttpUtils.PostAsync<StateQueryWrap>(node.GraphqlServer, "{\"query\":\"query{stateQuery{agent(address:\\\"" + address + "\\\"){address,gold,avatarStates{actionPoint,address,agentAddress,rankingMapAddress,name,level,exp,dailyRewardReceivedIndex,updatedAt,stageMap{count,pairs}}}}}\"}");
+            var wrap = await HttpUtils.PostAsync<StateQueryWrap>(node.GraphqlServer, "{\"query\":\"query{stateQuery{agent(address:\\\"" + address + "\\\"){address,gold,avatarStates{actionPoint,address,agentAddress,name,level,exp,dailyRewardReceivedIndex,updatedAt,stageMap{count,pairs}}}}}\"}");
             return wrap.StateQuery.Agent;
         }
 
