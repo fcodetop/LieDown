@@ -1,5 +1,6 @@
 using Libplanet.Crypto;
 using LieDown.Modles;
+using NLog;
 
 namespace LieDown
 {
@@ -18,6 +19,13 @@ namespace LieDown
         static void Main()
         {
             ApplicationConfiguration.Initialize();
+            var config = new NLog.Config.LoggingConfiguration();
+            // Targets where to log to: File and Console
+            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = "./logs/{shortdate}.log" }; 
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
+            // Apply config           
+            NLog.LogManager.Configuration = config;
+
             var preLoad = new Preload();
             if (preLoad.ShowDialog() != DialogResult.OK)
             {

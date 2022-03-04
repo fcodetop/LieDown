@@ -46,6 +46,8 @@
             this.lblName = new System.Windows.Forms.Label();
             this.lblCP = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
+            this.btnSetting = new System.Windows.Forms.Button();
+            this.btnStart = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -195,7 +197,7 @@
             // lblCP
             // 
             this.lblCP.AutoSize = true;
-            this.lblCP.Location = new System.Drawing.Point(306, 23);
+            this.lblCP.Location = new System.Drawing.Point(509, 57);
             this.lblCP.Name = "lblCP";
             this.lblCP.Size = new System.Drawing.Size(15, 17);
             this.lblCP.TabIndex = 5;
@@ -204,17 +206,39 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(274, 23);
+            this.label5.Location = new System.Drawing.Point(477, 57);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(26, 17);
             this.label5.TabIndex = 4;
             this.label5.Text = "CP:";
+            // 
+            // btnSetting
+            // 
+            this.btnSetting.Location = new System.Drawing.Point(302, 23);
+            this.btnSetting.Name = "btnSetting";
+            this.btnSetting.Size = new System.Drawing.Size(75, 23);
+            this.btnSetting.TabIndex = 6;
+            this.btnSetting.Text = "Setting";
+            this.btnSetting.UseVisualStyleBackColor = true;
+            this.btnSetting.Click += new System.EventHandler(this.btnSetting_Click);
+            // 
+            // btnStart
+            // 
+            this.btnStart.Location = new System.Drawing.Point(302, 52);
+            this.btnStart.Name = "btnStart";
+            this.btnStart.Size = new System.Drawing.Size(75, 23);
+            this.btnStart.TabIndex = 6;
+            this.btnStart.Text = "Start";
+            this.btnStart.UseVisualStyleBackColor = true;
+            this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
             // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(693, 480);
+            this.Controls.Add(this.btnStart);
+            this.Controls.Add(this.btnSetting);
             this.Controls.Add(this.lblCP);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.lblBlockDev);
@@ -263,6 +287,8 @@
         private Label lblName;
         private Label lblCP;
         private Label label5;
+        private Button btnSetting;
+        private Button btnStart;
     }
 }
 

@@ -27,9 +27,11 @@ using NCTx = Libplanet.Tx.Transaction<Libplanet.Action.PolymorphicAction<Nekoyum
 
 namespace LieDown
 {
+
     public partial class Main : Form
     {
-        private readonly static BlockHash GenesisHash = BlockHash.FromString("4582250d0da33b06779a8475d283d5dd210c683b9b999d74d03fac4f58fa6bce");
+        private static readonly NLog.Logger log = NLog.LogManager.GetCurrentClassLogger();
+        private static readonly  BlockHash GenesisHash = BlockHash.FromString("4582250d0da33b06779a8475d283d5dd210c683b9b999d74d03fac4f58fa6bce");
         private Character avatar = Program.Agent.AvatarStates.MaxBy(x=>x.Level);
         public Address Address => Program.PrivateKey.PublicKey.ToAddress();
         private NodeInfo Node;
@@ -113,7 +115,7 @@ namespace LieDown
 
         }
 
-        public  int GetCP( AvatarState avatarState)
+        public int GetCP( AvatarState avatarState)
         {           
             return Nekoyume.Battle.CPHelper.GetCPV2(avatarState, _characterSheet, _costumeStatSheet);
         }
@@ -215,7 +217,7 @@ namespace LieDown
                 }
                 else
                 {
-                    Debug.WriteLine("WeeklyArenaState is null");
+                    log.Warn("WeeklyArenaState is null");                   
                 }
             }
 
@@ -247,9 +249,10 @@ namespace LieDown
                     new ChannelOption("grpc.max_receive_message_length", -1)
                   }
               );
+          
             _service = MagicOnionClient.Create<IBlockChainService>(_channel, new IClientFilter[]
             {
-                new ClientFilter()
+                new ClientFilter(log)
             }).WithCancellationToken(_channel.ShutdownToken);
         }
         private async Task CloesRpc()
@@ -276,7 +279,7 @@ namespace LieDown
                              BindAvatar();
                          });
                          loopNode = false;
-                         if(isNewConn)
+                         if(isNewConn||_channel.State== ChannelState.Shutdown)
                              ConnectRpc();
                      }
                      else  //切换节点
@@ -354,7 +357,7 @@ namespace LieDown
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine(ex);
+                        log.Error(ex, $"PutTransaction error action:{actions.ToJson()}");
                         _StageTxs.TryRemove(new KeyValuePair<int, TxId>(GetHashCode(actions), tx.Id));
                     }
                 }
@@ -402,8 +405,8 @@ namespace LieDown
                     }
                     catch (Exception ex)
                     {
-
-                        Debug.WriteLine(ex);
+                        log.Error(ex, "GetTransaction error");
+                      
                     }
                 }
             }
@@ -442,14 +445,31 @@ namespace LieDown
             }
             await MakeTransaction(actions);
         }
+
+        private void btnSetting_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void btnStart_Click(object sender, EventArgs e)
+        {
+            
+            
+
+        }
     }
 
     public class ClientFilter : IClientFilter
     {
+        NLog.Logger _log;
+        public ClientFilter(NLog.Logger log)
+        {
+            this._log = log;
+        }
+
         public async ValueTask<ResponseContext> SendAsync(RequestContext context, Func<RequestContext, ValueTask<ResponseContext>> next)
         {
-            var retryCount = 0;
-            Exception exception = null;
+            var retryCount = 0;          
             while (retryCount < 3)
             {
                 try
@@ -458,12 +478,12 @@ namespace LieDown
                 }
                 catch (Exception e)
                 {
+                   
                     await Task.Delay((3 - retryCount) * 1000);
-                    retryCount++;
-                    exception = e;
+                    retryCount++;    
+                    _log.Error(e, $"ClientFilter error count:{retryCount}");                
                 }
-            }
-            Debug.WriteLine($"Filter Catch Exception: {exception}");
+            }            
             return null;
         }
     }
