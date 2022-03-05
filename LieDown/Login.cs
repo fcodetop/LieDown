@@ -18,8 +18,24 @@ namespace LieDown
             InitializeComponent();
         }
          IKeyStore _keyStore = Web3KeyStore.DefaultKeyStore;
-        private void Login_Load(object sender, EventArgs e)
+        private async void Login_Load(object sender, EventArgs e)
         {
+
+            if (null!= Program.PrivateKey) 
+            {
+                foreach (Control c in this.Controls) {
+                    c.Enabled = false;
+                }
+                lbl_Tips.Text = "Auto Login .... Please waite";
+                lbl_Tips.Visible = true;
+
+                var node = Program.Nodes.Where(x => x.PreloadEnded).OrderBy(x => x.PingDelay).FirstOrDefault();
+                var agent = await Modles.Agent.GetAgent(node, Program.Agent.Address);
+                Program.Agent = agent;
+                this.DialogResult = DialogResult.OK;
+                return;
+            }
+
             foreach (var pair in _keyStore.List())
             {
 

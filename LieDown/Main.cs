@@ -535,7 +535,7 @@ namespace LieDown
                                     btnStart_Click(null, null);
                                     break;
                                 }
-                                playCount = avatar.ActionPoint / 50;
+                                playCount = avatar.ActionPoint / 5;
                                 playCount = playCount > 8 ? 8 : playCount; //max 8
                             }
                             var worldId = getWorldId(stageId);

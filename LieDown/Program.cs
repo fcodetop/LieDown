@@ -1,6 +1,7 @@
 using Libplanet.Crypto;
 using LieDown.Modles;
 using NLog;
+using System.Diagnostics;
 
 namespace LieDown
 {
@@ -17,7 +18,7 @@ namespace LieDown
         ///  The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string [] args)
         {
             ApplicationConfiguration.Initialize();
             var config = new NLog.Config.LoggingConfiguration();
@@ -35,17 +36,30 @@ namespace LieDown
             Application.ThreadException += Application_ThreadException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-           // throw new Exception("just a test",new Exception("inner"));
+           // throw new Exception("just a test",new Exception("inner"));            
 
             var preLoad = new Preload();
             if (preLoad.ShowDialog() != DialogResult.OK)
             {
                 return;
             }
+            
+            if (args.Length > 1) 
+            {
+                try {
+                    PrivateKey = Libplanet.Crypto.PrivateKey.FromString(args[0]);
+                    Agent = new Agent() { Address = args[1] };
+                }
+                catch { }
+            }
+
             var login = new Login();
             if (login.ShowDialog() == DialogResult.OK)
             {
                 var main = new Main();
+                //if (args.Length == 0) {
+                //    throw new Exception("test");
+                //}
                 Application.Run(main);
             }
         }
@@ -60,6 +74,19 @@ namespace LieDown
             {
                 log.Error("CurrentDomain_UnhandledException {0}", e.ExceptionObject.ToJson());
             }
+
+            //auto restart
+            if (PrivateKey != null)
+            {
+                log.Info("Auto Restart");
+
+                var appName = Application.ExecutablePath;
+                Process ps = new Process();
+                ps.StartInfo.FileName = appName;
+                ps.StartInfo.Arguments = Libplanet.ByteUtil.Hex(PrivateKey.ToByteArray()) +" "+Agent.Address;
+                ps.Start();
+            }           
+
 
         }
 
