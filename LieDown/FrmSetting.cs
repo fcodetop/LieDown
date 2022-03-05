@@ -24,20 +24,30 @@ namespace LieDown
         {
             chAutoFill.Checked = Setting.AutoFillAP;
             txtStage.Text = Setting.Stage.ToString();
-            clBMode.SelectedIndex = (int)Setting.Mode;
+            switch (Setting.Mode) 
+            {
+                case Modles.SlashMode.Progress:
+                    rbProgress.Checked = true;
+                    break;
+                case Modles.SlashMode.Bootstrap:
+                    rbBootstrap.Checked = true;
+                    break;
+            
+            }
+          //  clBMode.SelectedIndex = (int)Setting.Mode;
         }
         private void btnSave_Click(object sender, EventArgs e)
         {
             Setting.AutoFillAP = chAutoFill.Checked;
             Setting.Stage = int.Parse(txtStage.Text);
-            Setting.Mode = (Modles.SlashMode)clBMode.SelectedIndex;
+            //  Setting.Mode = (Modles.SlashMode)clBMode.SelectedIndex;
+            Setting.Mode = rbProgress.Checked ? Modles.SlashMode.Progress : Modles.SlashMode.Bootstrap;
 
-           
 
+            Setting.Save(AvatarAddress);
 
+            this.DialogResult = DialogResult.OK;
 
         }
-
-
     }
 }

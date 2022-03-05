@@ -25,6 +25,9 @@ namespace LieDown.Modles
         public ColletionMap StageMap { get; set; }
 
         [Newtonsoft.Json.JsonIgnore]
+        public int StageId => StageMap.Pairs.Where(x => x[0] < 10000001).Max(x => x[0]) + 1;
+
+        [Newtonsoft.Json.JsonIgnore]
         public int CP { get; set; }
 
         public class ColletionMap { 

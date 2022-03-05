@@ -52,6 +52,8 @@ namespace LieDown
 
         private ConcurrentDictionary<int, TxId> _StageTxs = new ConcurrentDictionary<int, TxId>();
 
+        private Dictionary<string,Setting> _avatarSettings = new Dictionary<string, Setting>();
+
 
         public Main()
         {
@@ -83,11 +85,16 @@ namespace LieDown
             foreach (var state in _avatars)
             {
                 _cps[state.Key] = GetCP(state.Value);
+                var addr=state.Key.ToString();
+                _avatarSettings[addr] = Setting.LoadSetting(addr);
+                if (_avatarSettings[addr].Stage == 0) {
+                    _avatarSettings[addr].Stage = (state.Value.stageMap.Where(x => x.Key < 10000001).Max(x => x.Key)) + 1;
+                }
             }
 
             BindBlock();
             BindAvatar();
-
+           
             _arenaHelper = new Nekoyume.ArenaHelper(GameConfigState);
 
             var task = new Task(async () =>
@@ -144,7 +151,7 @@ namespace LieDown
                 return;
             }
             //delay 800 blocks
-            if ((_topBlock.Index - _resetIndex) < 1400)
+            if ( _topBlock.Index - _resetIndex< 1400)
             {
                 return;
             }
@@ -162,7 +169,16 @@ namespace LieDown
                 {
                   var  weeklyArenaState = new WeeklyArenaState(state); 
                     _resetIndex = weeklyArenaState.ResetIndex;                   
-                    var arenaInfo = weeklyArenaState.GetArenaInfo(avatarAddress);                    
+                    var arenaInfo = weeklyArenaState.GetArenaInfo(avatarAddress);
+                    if (arenaInfo != null)
+                    {
+                        this.Invoke(() =>
+                        {
+                            lblLeftCount.Text =arenaInfo.DailyChallengeCount.ToString();
+                            lblWin.Text = $"{arenaInfo.ArenaRecord.Win}/{arenaInfo.ArenaRecord.Lose}";
+
+                        });
+                    }
                     if (arenaInfo!=null&&arenaInfo.DailyChallengeCount <= 0)
                     {
                         log.Info("DailyChallengeEnd Avatar:{0}", avatar.AvatarAddress);
@@ -318,16 +334,18 @@ namespace LieDown
                 var key = new Address(avatar.AvatarAddress.Remove(0, 2));
                 if (_cps.ContainsKey(key))
                     lblCP.Text = _cps[key].ToString();
-                lblStage.Text = (avatar.StageMap.Pairs.Where(x => x[0] < 10000001).Max(x => x[0]) + 1).ToString();
+                lblStage.Text = avatar.StageId.ToString();
             });
         }
 
         private  void BindBlock()
         {
-            long topBlock = _topBlock.Index;
+            long topBlock = _topBlock.Index;           
             this.Invoke( () =>
             {
                 lblBlock.Text = topBlock.ToString();
+                if (_resetIndex > 0)
+                    lblDailyBlockt.Text = (topBlock - _resetIndex).ToString();
                 var meter = topBlock - avatar.DailyRewardReceivedIndex;
                 if (meter >= 1700)
                 {
@@ -347,7 +365,7 @@ namespace LieDown
             await CloesRpc();
         }
 
-        private SemaphoreSlim _singleTran = new SemaphoreSlim(1);
+        private SemaphoreSlim _singleTran = new SemaphoreSlim(1,1);
         private async Task<bool> MakeTransaction(List<NCAction> actions)
         {
             try
@@ -376,6 +394,11 @@ namespace LieDown
                     }
                 }
 
+                return false;
+            }
+           catch (Exception ex)
+            {
+                log.Error(ex, $"MakeTransaction error action:{actions.ToJson()}");               
                 return false;
             }
             finally
@@ -465,16 +488,97 @@ namespace LieDown
 
         private void btnSetting_Click(object sender, EventArgs e)
         {
+            var frm = new FrmSetting();
+            frm.AvatarAddress = avatar.AvatarAddress;
+            frm.Setting = _avatarSettings[avatar.AvatarAddress];
 
+            if (frm.ShowDialog(this) == DialogResult.OK) 
+            {
+                _avatarSettings[avatar.AvatarAddress] = frm.Setting;
+            }
         }
-
+        bool isFighting = false;
         private void btnStart_Click(object sender, EventArgs e)
         {
+            isFighting = !isFighting;
+            btnStart.Text = isFighting ? "stop" : "start";
+           
+            if (isFighting)
+            {
+                lblFightStatus.Text = "Starting...";
+                Task.Run(async () =>
+                {
+                    while (isFighting)
+                    {
+                        await Task.Delay(30000);
+                        if (!isFighting) {
+                            return;
+                        }
+                        if (avatar.ActionPoint == 0)
+                        {
+                            this.Invoke(() =>lblFightStatus.Text="Waiting AP...");
+                            continue;
+                        }
+                        else
+                        {
+                            this.Invoke(() => lblFightStatus.Text = "Fighting...");
+                            var playCount = 1;
+                            var setting = _avatarSettings[avatar.AvatarAddress];
+                            var stageId = avatar.StageId;
+                            if (setting.Mode == Modles.SlashMode.Bootstrap)
+                            {
+                                stageId = setting.Stage;
+                                if (stageId > avatar.StageId)
+                                {
+
+                                    MessageBox.Show("prev stage is not clear");
+                                    btnStart_Click(null, null);
+                                    break;
+                                }
+                                playCount = avatar.ActionPoint / 50;
+                                playCount = playCount > 8 ? 8 : playCount; //max 8
+                            }
+                            var worldId = getWorldId(stageId);
+
+                            var avatarAddress = new Address(avatar.AvatarAddress.Remove(0, 2));
+
+                            var action = new HackAndSlash
+                            {
+                                costumes = _avatars[avatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList(),
+                                equipments = _avatars[avatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList(),
+                                foods = new List<Guid>(),
+                                worldId = worldId,
+                                stageId = stageId,
+                                playCount = playCount,
+                                avatarAddress = avatarAddress,
+                            };
+                            var actions = new List<NCAction>() { action };
+                            if (_StageTxs.ContainsKey(GetHashCode(actions)))
+                            {
+                                continue;
+                            }
+                            await MakeTransaction(actions);
+                        }
+                    }
+                });
+            }
+            else {
+
+                lblFightStatus.Text = "Stopped";
+            }
             
             
 
         }
+        private int getWorldId(int stageId) 
+        {
+            double d = 50;
+            return (int)Math.Ceiling((double)stageId / d);
+        
+        }
     }
+
+   
 
     public class ClientFilter : IClientFilter
     {

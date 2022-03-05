@@ -18,18 +18,34 @@ namespace LieDown.Modles
 
         public int Stage { get; set; }
 
-
+        static readonly string path = $"{Application.StartupPath}setting";
         public void Save(string avatarAddress)
         {
             var str = this.ToJson();
-            if (Directory.Exists("setting"))
+
+            if (!Directory.Exists(path))
             {
-                Directory.CreateDirectory("setting");
+                Directory.CreateDirectory(path);
             }
-            File.WriteAllText($"setting/{avatarAddress}.json", str);
+            File.WriteAllText($"{path}/{avatarAddress}.json", str);
+            
         }
         public static Setting LoadSetting(string avatarAddress)
         {
+            try
+            {
+                var js = File.ReadAllText($"{path}/{avatarAddress}.json");
+                if (!string.IsNullOrEmpty(js))
+                {
+                    return js.JosnToObj<Setting>();
+                }
+            }
+            catch (DirectoryNotFoundException)
+            {
+            }
+            catch (FileNotFoundException)
+            {
+            }
 
             return new Setting();
         }
