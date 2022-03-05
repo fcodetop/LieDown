@@ -63,6 +63,8 @@ namespace LieDown
 
         private async void Main_Load(object sender, EventArgs e)
         {
+            btnSetting.Enabled = false;
+            btnStart.Enabled = false;
             ConnectRpc();
             _topBlock = await Node.GetBlockIndexAsync();
 
@@ -94,6 +96,9 @@ namespace LieDown
 
             BindBlock();
             BindAvatar();
+
+            btnSetting.Enabled = true;
+            btnStart.Enabled = true;
            
             _arenaHelper = new Nekoyume.ArenaHelper(GameConfigState);
 
