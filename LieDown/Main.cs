@@ -107,7 +107,14 @@ namespace LieDown
                 {
                     await Task.Delay(1000 * 60 * 3);
 
-                    await WeeklyArena();
+                    try
+                    {
+                        await WeeklyArena();
+                    }
+                    catch (Exception ex) 
+                    { 
+                        log.Error(ex, "WeeklyArena error");
+                    }
 
                 }
             });
@@ -141,7 +148,8 @@ namespace LieDown
             {
                 return;
             }
-             var action = new RankingBattle { avatarAddress = new Address(avatar.AvatarAddress.Remove(0, 2)) };
+            var avatarAddress = new Address(avatar.AvatarAddress.Remove(0, 2));
+             var action = new RankingBattle { avatarAddress = avatarAddress };
             if (_StageTxs.ContainsKey(GetHashCode(new List<NCAction>() { action })))
             {
                 return;
@@ -152,10 +160,10 @@ namespace LieDown
                 var state = await GetStateAsync(address);
                 if (state != null)
                 {
-                  var  weeklyArenaState = new WeeklyArenaState(state);
+                  var  weeklyArenaState = new WeeklyArenaState(state); 
                     _resetIndex = weeklyArenaState.ResetIndex;                   
-                    var arenaInfo = weeklyArenaState.GetArenaInfo(new Address(avatar.AvatarAddress.Remove(0, 2)));
-                    if (arenaInfo.DailyChallengeCount <= 0)
+                    var arenaInfo = weeklyArenaState.GetArenaInfo(avatarAddress);                    
+                    if (arenaInfo!=null&&arenaInfo.DailyChallengeCount <= 0)
                     {
                         log.Info("DailyChallengeEnd Avatar:{0}", avatar.AvatarAddress);
                         challengeEnd=true;
@@ -164,21 +172,21 @@ namespace LieDown
                     {
                         //delay 800 blocks
                         if ((_topBlock.Index - _resetIndex) < 1400)
-                        {
+                         {
                             return;
                         }
                         action.weeklyArenaAddress = address;
 
-                        //offical rule
-                        //var infos2 = _weeklyArenaState.GetArenaInfos(arenaInfo.AvatarAddress, 90, 10);
-                        //// Player does not play prev & this week arena.
-                        //if (!infos2.Any() && _weeklyArenaState.OrderedArenaInfos.Any())
-                        //{
-                        //    var last = _weeklyArenaState.OrderedArenaInfos.Last().AvatarAddress;
-                        //    infos2 = _weeklyArenaState.GetArenaInfos(last, 90, 0);
-                        //}
+                       // offical rule
+                        var infos2 = weeklyArenaState.GetArenaInfos(avatarAddress, 200, 10).Select(x=>x.arenaInfo);
+                        // Player does not play prev & this week arena.
+                        if (!infos2.Any() && weeklyArenaState.OrderedArenaInfos.Any())
+                        {
+                            var last = weeklyArenaState.OrderedArenaInfos.Last().AvatarAddress;
+                            infos2 =weeklyArenaState.GetArenaInfos(last, 90, 0).Select(x => x.arenaInfo);
+                        }
 
-                        var infos2 = weeklyArenaState.OrderedArenaInfos;
+                       // var infos2 = weeklyArenaState.OrderedArenaInfos;
 
                         Address enemyAddress = default(Address);
                         int minCP = int.MaxValue;
@@ -199,7 +207,7 @@ namespace LieDown
                                 _cps[info.AvatarAddress] = cp; //cache cp
                             }
 
-                            if (_cps[arenaInfo.AvatarAddress] >= cp * 1.18)
+                            if (_cps[avatarAddress] >= cp * 1.18)
                             {
                                 enemyAddress = info.AvatarAddress;
                                 break;
@@ -213,8 +221,8 @@ namespace LieDown
                         if (enemyAddress != default(Address))
                         {
                             action.enemyAddress = enemyAddress;
-                            action.costumeIds = _avatars[arenaInfo.AvatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList();
-                            action.equipmentIds = _avatars[arenaInfo.AvatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+                            action.costumeIds = _avatars[avatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+                            action.equipmentIds = _avatars[avatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList();
 
                             TryRankingBattle(action);
                         }

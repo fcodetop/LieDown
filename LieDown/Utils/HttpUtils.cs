@@ -37,19 +37,11 @@ namespace LieDown
                 Content = new StringContent(postJson, Encoding.UTF8, "application/json")
             };
             using var httpResponseMessage = await client.SendAsync(httpRequestMessage);
-            var content = await httpResponseMessage.Content.ReadAsStringAsync();          
+            var content = await httpResponseMessage.Content.ReadAsStringAsync();
             if (httpResponseMessage.IsSuccessStatusCode)
             {
-                try
-                {
-                    var graphQLResponse = JsonConvert.DeserializeObject<HttpResut<T>>(content);
-                    return graphQLResponse.Data;
-                }
-                catch(Exception e) 
-                {
-                    throw e;
-                }
-               
+                var graphQLResponse = JsonConvert.DeserializeObject<HttpResut<T>>(content);
+                return graphQLResponse.Data;
             }
 
             // error handling

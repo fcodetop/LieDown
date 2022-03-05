@@ -22,7 +22,11 @@ namespace LieDown
             ApplicationConfiguration.Initialize();
             var config = new NLog.Config.LoggingConfiguration();
             // Targets where to log to: File and Console
-            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = $"./logs/ld.log", ConcurrentWrites = true, ArchiveAboveSize = 1024 * 1024 * 5, ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.DateAndSequence };
+            var logfile = new NLog.Targets.FileTarget("logfile") { 
+                FileName = $"./logs/ld.log", ConcurrentWrites = true, ArchiveAboveSize = 1024 * 1024 * 5, 
+                ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.DateAndSequence,               
+                Layout = "${longdate} ${level:uppercase=true} ${message:withexception=true}"
+            };
             config.AddRule(LogLevel.Debug, LogLevel.Fatal, logfile);
             // Apply config           
             NLog.LogManager.Configuration = config;
@@ -30,6 +34,8 @@ namespace LieDown
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += Application_ThreadException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
+           // throw new Exception("just a test",new Exception("inner"));
 
             var preLoad = new Preload();
             if (preLoad.ShowDialog() != DialogResult.OK)

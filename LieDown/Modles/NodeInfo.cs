@@ -166,7 +166,7 @@ namespace LieDown.Modles
     public class TransactionResult
     {
         public TxStatus TxStatus { get; set; }
-        public long BlockIndex { get; set; }
+        public long? BlockIndex { get; set; }
         public string BlockHash { get; set; }
     }
 
