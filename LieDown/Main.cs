@@ -345,7 +345,7 @@ namespace LieDown
             {
                 lblBlock.Text = topBlock.ToString();
                 if (_resetIndex > 0)
-                    lblDailyBlockt.Text = (topBlock - _resetIndex).ToString();
+                    lblDailyBlock.Text = (topBlock - _resetIndex).ToString();
                 var meter = topBlock - avatar.DailyRewardReceivedIndex;
                 if (meter >= 1700)
                 {
