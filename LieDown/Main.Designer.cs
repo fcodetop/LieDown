@@ -55,12 +55,16 @@
             this.lblWin = new System.Windows.Forms.Label();
             this.lblDailyBlock = new System.Windows.Forms.Label();
             this.lblLeftCount = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
+            this.lblScore = new System.Windows.Forms.Label();
+            this.label12 = new System.Windows.Forms.Label();
+            this.lblRank = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(207, 61);
+            this.label1.Location = new System.Drawing.Point(190, 61);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(26, 17);
             this.label1.TabIndex = 0;
@@ -87,7 +91,7 @@
             // lblAP
             // 
             this.lblAP.AutoSize = true;
-            this.lblAP.Location = new System.Drawing.Point(239, 61);
+            this.lblAP.Location = new System.Drawing.Point(222, 61);
             this.lblAP.Name = "lblAP";
             this.lblAP.Size = new System.Drawing.Size(52, 17);
             this.lblAP.TabIndex = 1;
@@ -96,7 +100,7 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(193, 78);
+            this.label6.Location = new System.Drawing.Point(176, 78);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(40, 17);
             this.label6.TabIndex = 0;
@@ -105,7 +109,7 @@
             // lblLevel
             // 
             this.lblLevel.AutoSize = true;
-            this.lblLevel.Location = new System.Drawing.Point(239, 78);
+            this.lblLevel.Location = new System.Drawing.Point(222, 78);
             this.lblLevel.Name = "lblLevel";
             this.lblLevel.Size = new System.Drawing.Size(52, 17);
             this.lblLevel.TabIndex = 1;
@@ -132,7 +136,7 @@
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(189, 44);
+            this.label9.Location = new System.Drawing.Point(172, 44);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(44, 17);
             this.label9.TabIndex = 0;
@@ -141,7 +145,7 @@
             // lblStage
             // 
             this.lblStage.AutoSize = true;
-            this.lblStage.Location = new System.Drawing.Point(239, 44);
+            this.lblStage.Location = new System.Drawing.Point(222, 44);
             this.lblStage.Name = "lblStage";
             this.lblStage.Size = new System.Drawing.Size(52, 17);
             this.lblStage.TabIndex = 1;
@@ -204,7 +208,7 @@
             // lblCP
             // 
             this.lblCP.AutoSize = true;
-            this.lblCP.Location = new System.Drawing.Point(473, 43);
+            this.lblCP.Location = new System.Drawing.Point(481, 43);
             this.lblCP.Name = "lblCP";
             this.lblCP.Size = new System.Drawing.Size(52, 17);
             this.lblCP.TabIndex = 5;
@@ -213,7 +217,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(441, 43);
+            this.label5.Location = new System.Drawing.Point(453, 44);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(26, 17);
             this.label5.TabIndex = 4;
@@ -231,7 +235,7 @@
             // 
             // btnStart
             // 
-            this.btnStart.Location = new System.Drawing.Point(569, 70);
+            this.btnStart.Location = new System.Drawing.Point(569, 64);
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(75, 23);
             this.btnStart.TabIndex = 6;
@@ -243,7 +247,7 @@
             // 
             this.lblFightStatus.AutoSize = true;
             this.lblFightStatus.ForeColor = System.Drawing.Color.RoyalBlue;
-            this.lblFightStatus.Location = new System.Drawing.Point(441, 73);
+            this.lblFightStatus.Location = new System.Drawing.Point(569, 87);
             this.lblFightStatus.Name = "lblFightStatus";
             this.lblFightStatus.Size = new System.Drawing.Size(58, 17);
             this.lblFightStatus.TabIndex = 7;
@@ -303,6 +307,42 @@
             this.lblLeftCount.TabIndex = 1;
             this.lblLeftCount.Text = "loading";
             // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(435, 61);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(44, 17);
+            this.label7.TabIndex = 0;
+            this.label7.Text = "Score:";
+            // 
+            // lblScore
+            // 
+            this.lblScore.AutoSize = true;
+            this.lblScore.Location = new System.Drawing.Point(481, 61);
+            this.lblScore.Name = "lblScore";
+            this.lblScore.Size = new System.Drawing.Size(52, 17);
+            this.lblScore.TabIndex = 1;
+            this.lblScore.Text = "loading";
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(439, 78);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(40, 17);
+            this.label12.TabIndex = 0;
+            this.label12.Text = "Rank:";
+            // 
+            // lblRank
+            // 
+            this.lblRank.AutoSize = true;
+            this.lblRank.Location = new System.Drawing.Point(481, 78);
+            this.lblRank.Name = "lblRank";
+            this.lblRank.Size = new System.Drawing.Size(52, 17);
+            this.lblRank.TabIndex = 1;
+            this.lblRank.Text = "loading";
+            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
@@ -320,6 +360,8 @@
             this.Controls.Add(this.lblLeftCount);
             this.Controls.Add(this.lblStage);
             this.Controls.Add(this.lblExp);
+            this.Controls.Add(this.lblRank);
+            this.Controls.Add(this.lblScore);
             this.Controls.Add(this.lblDailyBlock);
             this.Controls.Add(this.lblWin);
             this.Controls.Add(this.lblLevel);
@@ -327,7 +369,9 @@
             this.Controls.Add(this.label11);
             this.Controls.Add(this.label8);
             this.Controls.Add(this.label15);
+            this.Controls.Add(this.label12);
             this.Controls.Add(this.label9);
+            this.Controls.Add(this.label7);
             this.Controls.Add(this.lblPMeter);
             this.Controls.Add(this.lblDailyBlockt);
             this.Controls.Add(this.label4);
@@ -374,6 +418,10 @@
         private Label lblWin;
         private Label lblDailyBlock;
         private Label lblLeftCount;
+        private Label label7;
+        private Label lblScore;
+        private Label label12;
+        private Label lblRank;
     }
 }
 

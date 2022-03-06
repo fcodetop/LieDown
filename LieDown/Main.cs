@@ -155,8 +155,8 @@ namespace LieDown
             {
                 return;
             }
-            //delay 800 blocks
-            if ( _topBlock.Index - _resetIndex< 1400)
+            //delay 2000 blocks
+            if ( _topBlock.Index - _resetIndex< 2000)
             {
                 return;
             }
@@ -181,6 +181,7 @@ namespace LieDown
                         {
                             lblLeftCount.Text =arenaInfo.DailyChallengeCount.ToString();
                             lblWin.Text = $"{arenaInfo.ArenaRecord.Win}/{arenaInfo.ArenaRecord.Lose}";
+                            lblScore.Text =arenaInfo.Score.ToString();                           
 
                         });
                     }
@@ -191,8 +192,8 @@ namespace LieDown
                     }
                     else
                     {
-                        //delay 800 blocks
-                        if ((_topBlock.Index - _resetIndex) < 1400)
+                        //delay 2000 blocks
+                        if ((_topBlock.Index - _resetIndex) < 2000)
                          {
                             return;
                         }
@@ -202,6 +203,7 @@ namespace LieDown
                         var low = 10;
                         var max = 800;
                         var index = weeklyArenaState.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
+                        this.Invoke(() => lblRank.Text =index.ToString());
                         if (index > up * 2)
                         {
                             up = index / 2;
