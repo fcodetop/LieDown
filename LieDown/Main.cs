@@ -198,8 +198,20 @@ namespace LieDown
                         }
                         action.weeklyArenaAddress = address;
 
-                       // offical rule
-                        var infos2 = weeklyArenaState.GetArenaInfos(avatarAddress, 200, 10).Select(x=>x.arenaInfo);
+                        var up = 200;
+                        var low = 10;
+                        var max = 800;
+                        var index = weeklyArenaState.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
+                        if (index > up * 2)
+                        {
+                            up = index / 2;
+                        }
+                        else if(index<up) {
+                            up = index;                            
+                        }
+                        low = max - up;
+                     
+                        var infos2 = weeklyArenaState.GetArenaInfos(avatarAddress, up, low).Select(x=>x.arenaInfo);
                         // Player does not play prev & this week arena.
                         if (!infos2.Any() && weeklyArenaState.OrderedArenaInfos.Any())
                         {
