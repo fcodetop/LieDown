@@ -175,13 +175,16 @@ namespace LieDown
                   var  weeklyArenaState = new WeeklyArenaState(state); 
                     _resetIndex = weeklyArenaState.ResetIndex;                   
                     var arenaInfo = weeklyArenaState.GetArenaInfo(avatarAddress);
+                    int index = -1;
                     if (arenaInfo != null)
                     {
+                         index = weeklyArenaState.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
                         this.Invoke(() =>
                         {
                             lblLeftCount.Text =arenaInfo.DailyChallengeCount.ToString();
                             lblWin.Text = $"{arenaInfo.ArenaRecord.Win}/{arenaInfo.ArenaRecord.Lose}";
-                            lblScore.Text =arenaInfo.Score.ToString();                           
+                            lblScore.Text =arenaInfo.Score.ToString();
+                            lblRank.Text = index.ToString();
 
                         });
                     }
@@ -201,14 +204,13 @@ namespace LieDown
 
                         var up = 200;
                         var low = 10;
-                        var max = 800;
-                        var index = weeklyArenaState.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
-                        this.Invoke(() => lblRank.Text =index.ToString());
+                        var max = 800;                       
+                       
                         if (index > up * 2)
                         {
                             up = index / 2;
                         }
-                        else if(index<up) {
+                        else if(index<up&&index>0) {
                             up = index;                            
                         }
                         low = max - up;
