@@ -35,6 +35,8 @@
             this.rbBootstrap = new System.Windows.Forms.RadioButton();
             this.rbProgress = new System.Windows.Forms.RadioButton();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.txtRank = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -46,7 +48,7 @@
             this.chAutoFill.Size = new System.Drawing.Size(85, 21);
             this.chAutoFill.TabIndex = 2;
             this.chAutoFill.Text = "AutoFillAp";
-            this.chAutoFill.UseVisualStyleBackColor = true;          
+            this.chAutoFill.UseVisualStyleBackColor = true;
             // 
             // label2
             // 
@@ -55,11 +57,11 @@
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(44, 17);
             this.label2.TabIndex = 99;
-            this.label2.Text = "Stage:";         
+            this.label2.Text = "Stage:";
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(95, 147);
+            this.btnSave.Location = new System.Drawing.Point(95, 167);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(75, 23);
             this.btnSave.TabIndex = 3;
@@ -72,7 +74,7 @@
             this.txtStage.Location = new System.Drawing.Point(95, 76);
             this.txtStage.Name = "txtStage";
             this.txtStage.Size = new System.Drawing.Size(100, 23);
-            this.txtStage.TabIndex = 1;          
+            this.txtStage.TabIndex = 1;
             // 
             // rbBootstrap
             // 
@@ -107,11 +109,29 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Mode";
             // 
+            // txtRank
+            // 
+            this.txtRank.Location = new System.Drawing.Point(95, 138);
+            this.txtRank.Name = "txtRank";
+            this.txtRank.Size = new System.Drawing.Size(100, 23);
+            this.txtRank.TabIndex = 102;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(45, 141);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(40, 17);
+            this.label1.TabIndex = 103;
+            this.label1.Text = "Rank:";
+            // 
             // FrmSetting
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(296, 198);
+            this.Controls.Add(this.txtRank);
+            this.Controls.Add(this.label1);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.txtStage);
             this.Controls.Add(this.btnSave);
@@ -140,5 +160,7 @@
         private RadioButton rbBootstrap;
         private RadioButton rbProgress;
         private GroupBox groupBox1;
+        private TextBox txtRank;
+        private Label label1;
     }
 }

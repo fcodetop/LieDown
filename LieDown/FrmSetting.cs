@@ -24,6 +24,7 @@ namespace LieDown
         {
             chAutoFill.Checked = Setting.AutoFillAP;
             txtStage.Text = Setting.Stage.ToString();
+            txtRank.Text = Setting.Rank.ToString(); 
             switch (Setting.Mode) 
             {
                 case Modles.SlashMode.Progress:
@@ -40,6 +41,7 @@ namespace LieDown
         {
             Setting.AutoFillAP = chAutoFill.Checked;
             Setting.Stage = int.Parse(txtStage.Text);
+            Setting.Rank = int.Parse(txtRank.Text);
             //  Setting.Mode = (Modles.SlashMode)clBMode.SelectedIndex;
             Setting.Mode = rbProgress.Checked ? Modles.SlashMode.Progress : Modles.SlashMode.Bootstrap;
 

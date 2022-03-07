@@ -18,6 +18,8 @@ namespace LieDown.Modles
 
         public int Stage { get; set; }
 
+        public int Rank { get; set; }
+
         static readonly string path = $"{Application.StartupPath}setting";
         public void Save(string avatarAddress)
         {

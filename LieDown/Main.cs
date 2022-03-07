@@ -83,7 +83,7 @@ namespace LieDown
             _costumeStatSheet.Set(csv.ToDotnetString());
 
 
-            _avatars = await GetAvatayrStates(Program.Agent.AvatarStates.Select(x => new Address(x.AvatarAddress.Remove(0, 2))));
+            _avatars = await GetAvatayrStates(Program.Agent.AvatarStates.Select(x => new Address(x.AvatarAddress.Remove(0, 2)))); 
             foreach (var state in _avatars)
             {
                 _cps[state.Key] = GetCP(state.Value);
@@ -204,14 +204,24 @@ namespace LieDown
 
                         var up = 200;
                         var low = 10;
-                        var max = 800;                       
-                       
-                        if (index > up * 2)
+                        var max = 800;
+
+                        var rank = _avatarSettings[avatar.AvatarAddress].Rank;
+
+                        if (rank > 0&&index>rank)
                         {
-                            up = index / 2;
+                            up = index - rank < up ? up : index - rank;
                         }
-                        else if(index<up&&index>0) {
-                            up = index;                            
+                        else
+                        {
+                            if (index > up * 2)
+                            {
+                                up = index / 2;
+                            }
+                            else if (index < up && index > 0)
+                            {
+                                up = index;
+                            }
                         }
                         low = max - up;
                      
