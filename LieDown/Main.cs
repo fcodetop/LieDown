@@ -54,7 +54,6 @@ namespace LieDown
 
         private Dictionary<string,Setting> _avatarSettings = new Dictionary<string, Setting>();
 
-
         public Main()
         {
             InitializeComponent();
@@ -493,18 +492,31 @@ namespace LieDown
             return await _service.GetNextTxNonce( Address.ToByteArray());
         }
 
-        public async void TryDailyReward() 
+        private DateTime _dailyRewardLock = DateTime.Now.AddMinutes(30);
+        public async void TryDailyReward()
         {
-            var action = new DailyReward
-            {
-                avatarAddress =new Address(avatar.AvatarAddress.Remove(0,2))
-            };
-            var actions = new List<NCAction> { action };
-            if (_StageTxs.ContainsKey(GetHashCode( actions)) )
+
+            if (_dailyRewardLock.AddMinutes(3) > DateTime.Now)
             {
                 return;
             }
-            await MakeTransaction(actions);
+            else 
+            {
+                _dailyRewardLock = DateTime.Now;
+            }
+            var action = new DailyReward
+            {
+                avatarAddress = new Address(avatar.AvatarAddress.Remove(0, 2))
+            };
+            var actions = new List<NCAction> { action };
+            if (_StageTxs.ContainsKey(GetHashCode(actions)))
+            {
+                return;
+            }
+            if (!await MakeTransaction(actions)) {
+
+                _dailyRewardLock = DateTime.Now.AddMinutes(-3);
+            }        
         }
 
         public async void TryRankingBattle(RankingBattle action)
