@@ -105,7 +105,7 @@ namespace LieDown
               {
                   while (!this.Disposing)
                   {
-                      await Task.Delay(5000);
+                      await Task.Delay(13000);
                       await ComfirmTx();
                       await GetData();
 
@@ -365,6 +365,16 @@ namespace LieDown
                 if (_cps.ContainsKey(key))
                     lblCP.Text = _cps[key].ToString();
                 lblStage.Text = avatar.StageId.ToString();
+                var meter = _topBlock.Index - avatar.DailyRewardReceivedIndex;
+                if (meter >= 1700)
+                {
+                    meter = 1700;
+                    if (avatar.ActionPoint == 0 && _service != null &&btnSetting.Enabled)
+                    {
+                        TryDailyReward();
+                    }
+                }
+                lblPMeter.Text = $"{meter}/1700";
             });
         }
 
@@ -375,18 +385,7 @@ namespace LieDown
             {
                 lblBlock.Text = topBlock.ToString();
                 if (_resetIndex > 0)
-                    lblDailyBlock.Text = (topBlock - _resetIndex).ToString();
-                var meter = topBlock - avatar.DailyRewardReceivedIndex;
-                if (meter >= 1700)
-                {
-                    meter = 1700;
-                    if (avatar.ActionPoint == 0&& _service!=null) 
-                    {
-                       TryDailyReward();
-                    }
-                }
-                lblPMeter.Text = $"{meter}/1700";
-
+                    lblDailyBlock.Text = (topBlock - _resetIndex).ToString(); 
             });
         }
 
@@ -492,17 +491,12 @@ namespace LieDown
             return await _service.GetNextTxNonce( Address.ToByteArray());
         }
 
-        private DateTime _dailyRewardLock = DateTime.Now.AddMinutes(30);
+        private DateTime _dailyRewardLock = DateTime.Now.AddMinutes(-30);
         public async void TryDailyReward()
-        {
-
+        {           
             if (_dailyRewardLock.AddMinutes(3) > DateTime.Now)
             {
                 return;
-            }
-            else 
-            {
-                _dailyRewardLock = DateTime.Now;
             }
             var action = new DailyReward
             {
@@ -513,10 +507,12 @@ namespace LieDown
             {
                 return;
             }
-            if (!await MakeTransaction(actions)) {
+            if (await MakeTransaction(actions))
+            {
+                _dailyRewardLock = DateTime.Now;
+                log.Info("DailyReward submit sucess avatar:{0}", avatar.AvatarAddress);
+            }
 
-                _dailyRewardLock = DateTime.Now.AddMinutes(-3);
-            }        
         }
 
         public async void TryRankingBattle(RankingBattle action)
