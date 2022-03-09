@@ -159,7 +159,7 @@ namespace LieDown
                 return;
             }
             //delay 2000 blocks
-            if ( _topBlock.Index - _resetIndex< 2000)
+            if ( _topBlock.Index - _resetIndex< 2200)
             {
                 return;
             }
@@ -199,7 +199,7 @@ namespace LieDown
                     else
                     {
                         //delay 2000 blocks
-                        if ((_topBlock.Index - _resetIndex) < 2000)
+                        if ((_topBlock.Index - _resetIndex) < 2200)
                          {
                             return;
                         }
@@ -257,7 +257,7 @@ namespace LieDown
                                 _cps[info.AvatarAddress] = cp; //cache cp
                             }
 
-                            if (_cps[avatarAddress] >= cp * 1.18)
+                            if (_cps[avatarAddress] >= cp * 1.2)
                             {
                                 enemyAddress = info.AvatarAddress;
                                 break;
@@ -331,23 +331,30 @@ namespace LieDown
             var isNewConn = false;
             while (loopNode)
             {
-                await Node.GetPreloadEndedAsync().ContinueWith(async (preloadEnded) =>
+                if (Node == null)
+                {
+                    await Task.Delay(1000 * 60*3);
+                    await Task.WhenAll(Program.Nodes.Select(x => x.GetPreloadEndedAsync()));
+                    Node = Program.Nodes.Where(x => x.PreloadEnded).MinBy(x => x.PingDelay);
+                    continue;
+                }
+                await await Node.GetPreloadEndedAsync().ContinueWith(async (preloadEnded) =>
                  {
                      if (await preloadEnded)
                      {
-
-                         await Node.GetBlockIndexAsync()
-                         .ContinueWith(async (topBlock) => { _topBlock = await topBlock; BindBlock(); }) 
-                         .ContinueWith(async (x) => {
+                       await await Node.GetBlockIndexAsync()
+                         .ContinueWith(async (topBlock) => { _topBlock = await topBlock; BindBlock(); })
+                         .ContinueWith(async (x) =>
+                         {
                              avatar = await Character.GetCharacterAync(Node, avatar.AvatarAddress);
                              BindAvatar();
                          });
                          loopNode = false;
-                         if(isNewConn||_channel.State== ChannelState.Shutdown)
+                         if (isNewConn || _channel.State == ChannelState.Shutdown)
                              ConnectRpc();
                      }
                      else  //切换节点
-                     {                       
+                     {
                          Node = Program.Nodes.Where(x => x.PreloadEnded).MinBy(x => x.PingDelay);
                          await CloesRpc();
                          isNewConn = true;

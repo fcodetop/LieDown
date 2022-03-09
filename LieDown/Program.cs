@@ -37,8 +37,17 @@ namespace LieDown
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += Application_ThreadException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-
-           // throw new Exception("just a test",new Exception("inner"));            
+           
+            if (args.Length > 2)
+            {
+                try
+                {
+                    PrivateKey = Libplanet.Crypto.PrivateKey.FromString(args[0]);
+                    Agent = new Agent() { Address = args[1] };
+                    IsFighting = bool.Parse(args[2]);
+                }
+                catch { }
+            }
 
             var preLoad = new Preload();
             if (preLoad.ShowDialog() != DialogResult.OK)
@@ -46,15 +55,7 @@ namespace LieDown
                 return;
             }
             
-            if (args.Length > 2) 
-            {
-                try {
-                    PrivateKey = Libplanet.Crypto.PrivateKey.FromString(args[0]);
-                    Agent = new Agent() { Address = args[1] };
-                    IsFighting=bool.Parse(args[2]);
-                }
-                catch { }
-            }
+         
 
             var login = new Login();
             if (login.ShowDialog() == DialogResult.OK)
