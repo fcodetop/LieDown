@@ -14,6 +14,8 @@ namespace LieDown
         public static Agent Agent;
         private static readonly NLog.Logger log = NLog.LogManager.GetCurrentClassLogger();
 
+        public static bool IsFighting = false;
+
         /// <summary>
         ///  The main entry point for the application.
         /// </summary>
@@ -44,11 +46,12 @@ namespace LieDown
                 return;
             }
             
-            if (args.Length > 1) 
+            if (args.Length > 2) 
             {
                 try {
                     PrivateKey = Libplanet.Crypto.PrivateKey.FromString(args[0]);
                     Agent = new Agent() { Address = args[1] };
+                    IsFighting=bool.Parse(args[2]);
                 }
                 catch { }
             }
@@ -83,7 +86,7 @@ namespace LieDown
                 var appName = Application.ExecutablePath;
                 Process ps = new Process();
                 ps.StartInfo.FileName = appName;
-                ps.StartInfo.Arguments = Libplanet.ByteUtil.Hex(PrivateKey.ToByteArray()) +" "+Agent.Address;
+                ps.StartInfo.Arguments = Libplanet.ByteUtil.Hex(PrivateKey.ToByteArray()) +" "+Agent.Address + " " +IsFighting.ToString();
                 ps.Start();
             }           
 

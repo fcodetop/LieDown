@@ -130,6 +130,10 @@ namespace LieDown
                 }
             });
             task1.Start();
+            if (Program.IsFighting) {
+                btnStart_Click(sender, e);
+            }
+
             log.Info("start avatar{0}", avatar.AvatarAddress);
 
         }
@@ -539,7 +543,7 @@ namespace LieDown
         bool isFighting = false;
         private void btnStart_Click(object sender, EventArgs e)
         {
-            isFighting = !isFighting;
+            Program.IsFighting = isFighting = !isFighting;
             btnStart.Text = isFighting ? "stop" : "start";
            
             if (isFighting)
@@ -571,7 +575,7 @@ namespace LieDown
                                 {
 
                                     MessageBox.Show("prev stage is not clear");
-                                    btnStart_Click(null, null);
+                                    btnStart_Click(sender, e);
                                     break;
                                 }
                                 playCount = avatar.ActionPoint / 5;
