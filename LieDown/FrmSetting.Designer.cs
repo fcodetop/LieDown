@@ -37,6 +37,8 @@
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.txtRank = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.txtRBIndex = new System.Windows.Forms.TextBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -61,7 +63,7 @@
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(95, 167);
+            this.btnSave.Location = new System.Drawing.Point(95, 213);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(75, 23);
             this.btnSave.TabIndex = 3;
@@ -125,11 +127,29 @@
             this.label1.TabIndex = 103;
             this.label1.Text = "Rank:";
             // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(26, 177);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(59, 17);
+            this.label3.TabIndex = 103;
+            this.label3.Text = "RBIndex:";
+            // 
+            // txtRBIndex
+            // 
+            this.txtRBIndex.Location = new System.Drawing.Point(95, 174);
+            this.txtRBIndex.Name = "txtRBIndex";
+            this.txtRBIndex.Size = new System.Drawing.Size(100, 23);
+            this.txtRBIndex.TabIndex = 102;
+            // 
             // FrmSetting
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(296, 198);
+            this.ClientSize = new System.Drawing.Size(284, 284);
+            this.Controls.Add(this.txtRBIndex);
+            this.Controls.Add(this.label3);
             this.Controls.Add(this.txtRank);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.groupBox1);
@@ -162,5 +182,7 @@
         private GroupBox groupBox1;
         private TextBox txtRank;
         private Label label1;
+        private Label label3;
+        private TextBox txtRBIndex;
     }
 }

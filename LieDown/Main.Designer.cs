@@ -59,6 +59,7 @@
             this.lblScore = new System.Windows.Forms.Label();
             this.label12 = new System.Windows.Forms.Label();
             this.lblRank = new System.Windows.Forms.Label();
+            this.btnRefresh = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // label1
@@ -343,6 +344,16 @@
             this.lblRank.TabIndex = 1;
             this.lblRank.Text = "loading";
             // 
+            // btnRefresh
+            // 
+            this.btnRefresh.Location = new System.Drawing.Point(435, 9);
+            this.btnRefresh.Name = "btnRefresh";
+            this.btnRefresh.Size = new System.Drawing.Size(75, 23);
+            this.btnRefresh.TabIndex = 6;
+            this.btnRefresh.Text = "Refresh";
+            this.btnRefresh.UseVisualStyleBackColor = true;
+            this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
+            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
@@ -350,6 +361,7 @@
             this.ClientSize = new System.Drawing.Size(693, 480);
             this.Controls.Add(this.lblFightStatus);
             this.Controls.Add(this.btnStart);
+            this.Controls.Add(this.btnRefresh);
             this.Controls.Add(this.btnSetting);
             this.Controls.Add(this.lblCP);
             this.Controls.Add(this.label5);
@@ -422,6 +434,7 @@
         private Label lblScore;
         private Label label12;
         private Label lblRank;
+        private Button btnRefresh;
     }
 }
 

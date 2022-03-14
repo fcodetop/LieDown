@@ -24,8 +24,9 @@ namespace LieDown
         {
             chAutoFill.Checked = Setting.AutoFillAP;
             txtStage.Text = Setting.Stage.ToString();
-            txtRank.Text = Setting.Rank.ToString(); 
-            switch (Setting.Mode) 
+            txtRank.Text = Setting.Rank.ToString();
+            txtRBIndex.Text = Setting.RankingBattleBlockIndex == 0 ? "10" : Setting.RankingBattleBlockIndex.ToString();
+            switch (Setting.Mode)
             {
                 case Modles.SlashMode.Progress:
                     rbProgress.Checked = true;
@@ -33,15 +34,22 @@ namespace LieDown
                 case Modles.SlashMode.Bootstrap:
                     rbBootstrap.Checked = true;
                     break;
-            
+
             }
-          //  clBMode.SelectedIndex = (int)Setting.Mode;
+            //  clBMode.SelectedIndex = (int)Setting.Mode;
         }
         private void btnSave_Click(object sender, EventArgs e)
         {
             Setting.AutoFillAP = chAutoFill.Checked;
             Setting.Stage = int.Parse(txtStage.Text);
             Setting.Rank = int.Parse(txtRank.Text);
+            var index=int.Parse(txtRBIndex.Text);
+            if (index < 10) 
+            {
+                MessageBox.Show(this, "RankingBattleBlockIndex must greater than 10", "Error");
+                return;
+            }
+            Setting.RankingBattleBlockIndex = index;
             //  Setting.Mode = (Modles.SlashMode)clBMode.SelectedIndex;
             Setting.Mode = rbProgress.Checked ? Modles.SlashMode.Progress : Modles.SlashMode.Bootstrap;
 

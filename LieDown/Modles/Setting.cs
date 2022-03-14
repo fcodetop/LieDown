@@ -10,7 +10,7 @@ namespace LieDown.Modles
     {
         public Setting()
         {
-            AutoFillAP = true;
+            AutoFillAP = true;           
         }
         public bool AutoFillAP { get; set; }
 
@@ -19,6 +19,8 @@ namespace LieDown.Modles
         public int Stage { get; set; }
 
         public int Rank { get; set; }
+
+        public int RankingBattleBlockIndex { get; set; }
 
         static readonly string path = $"{Application.StartupPath}setting";
         public void Save(string avatarAddress)
@@ -51,6 +53,7 @@ namespace LieDown.Modles
 
             return new Setting();
         }
+        
     }
     public enum SlashMode
     {

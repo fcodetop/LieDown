@@ -148,145 +148,160 @@ namespace LieDown
         private bool challengeEnd=false;
 
         private async Task WeeklyArena()
-        {            
+        {
             if (_resetIndex > 0 && _topBlock.Index > _resetIndex + GameConfigState.DailyArenaInterval)
             {
                 //next interval
                 challengeEnd = false;
             }
-            if (challengeEnd) 
+            if (challengeEnd)
             {
                 return;
             }
-            //delay 2000 blocks
-            if ( _topBlock.Index - _resetIndex< 2200)
+
+            var delayIndex = _avatarSettings[avatar.AvatarAddress].RankingBattleBlockIndex;
+            delayIndex = delayIndex == 0 ? 2600 : delayIndex;
+
+            //delay 2600 blocks
+            if (_topBlock.Index - _resetIndex < delayIndex)
             {
                 return;
             }
             var avatarAddress = new Address(avatar.AvatarAddress.Remove(0, 2));
-             var action = new RankingBattle { avatarAddress = avatarAddress };
+            var action = new RankingBattle { avatarAddress = avatarAddress };
             if (_StageTxs.ContainsKey(GetHashCode(new List<NCAction>() { action })))
             {
                 return;
             }
 
-            if (_arenaHelper.TryGetThisWeekAddress(_topBlock.Index, out var address))
+            if (!await GetWeeklyArenInfo(avatarAddress,
+                  async (address, weeklyArenaState, index, arenaInfo) =>
+               {
+                   if (arenaInfo != null && arenaInfo.DailyChallengeCount <= 0)
+                   {
+                       log.Info("DailyChallengeEnd Avatar:{0}", avatar.AvatarAddress);
+                       challengeEnd = true;
+                   }
+                   else
+                   {
+                        //delay 2600 blocks
+                        if ((_topBlock.Index - _resetIndex) < delayIndex)
+                       {
+                           return;
+                       }
+                       action.weeklyArenaAddress = address;
+
+                       var up = 200;
+                       var low = 10;
+                       var max = 800;
+
+                       var rank = _avatarSettings[avatar.AvatarAddress].Rank;
+
+                       if (rank > 0 && index > rank)
+                       {
+                           up = index - rank < up ? up : index - rank;
+                       }
+                       else
+                       {
+                           if (index > up * 2)
+                           {
+                               up = index / 2;
+                           }
+                           else if (index < up && index > 0)
+                           {
+                               up = index;
+                           }
+                       }
+                       low = max - up;
+
+                       var infos2 = weeklyArenaState.GetArenaInfos(avatarAddress, up, low).Select(x => x.arenaInfo);
+                        // Player does not play prev & this week arena.
+                        if (!infos2.Any() && weeklyArenaState.OrderedArenaInfos.Any())
+                       {
+                           var last = weeklyArenaState.OrderedArenaInfos.Last().AvatarAddress;
+                           infos2 = weeklyArenaState.GetArenaInfos(last, 90, 0).Select(x => x.arenaInfo);
+                       }
+
+                        // var infos2 = weeklyArenaState.OrderedArenaInfos;
+
+                        Address enemyAddress = default(Address);
+                       int minCP = int.MaxValue;
+                       foreach (var info in infos2) //auto match
+                        {
+                           if (!info.Active)
+                               continue;
+                           int cp;
+
+                           if (_cps.ContainsKey(info.AvatarAddress))
+                           {
+                               cp = _cps[info.AvatarAddress];
+                           }
+                           else
+                           {
+                               var avatarState = (await GetAvatayrStates(new List<Address>() { info.AvatarAddress })).FirstOrDefault().Value;
+                               cp = GetCP(avatarState);
+                               _cps[info.AvatarAddress] = cp; //cache cp
+                            }
+
+                           if (_cps[avatarAddress] >= cp * 1.2)
+                           {
+                               enemyAddress = info.AvatarAddress;
+                               break;
+                           }
+                           if (cp < minCP)
+                           {
+                               minCP = cp;
+                               enemyAddress = info.AvatarAddress;
+                           }
+                       }
+                       if (enemyAddress != default(Address))
+                       {
+                           action.enemyAddress = enemyAddress;
+                           action.costumeIds = _avatars[avatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+                           action.equipmentIds = _avatars[avatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+
+                           TryRankingBattle(action);
+                       }
+
+                   }
+
+               }))
             {
+
+                log.Warn("WeeklyArenaState is null");
+            }
+
+        }
+
+        private async Task<bool> GetWeeklyArenInfo(Address avatarAddress, Action<Address,WeeklyArenaState, int, ArenaInfo> callback)
+        {
+            if (_arenaHelper.TryGetThisWeekAddress(_topBlock.Index, out var address))
+            {               
                 var state = await GetStateAsync(address);
                 if (state != null)
                 {
-                  var  weeklyArenaState = new WeeklyArenaState(state); 
-                    _resetIndex = weeklyArenaState.ResetIndex;                   
+                    var weeklyArenaState = new WeeklyArenaState(state);
+                    _resetIndex = weeklyArenaState.ResetIndex;
+                    var index = -1;
                     var arenaInfo = weeklyArenaState.GetArenaInfo(avatarAddress);
-                    int index = -1;
                     if (arenaInfo != null)
                     {
-                         index = weeklyArenaState.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
+                        index = weeklyArenaState.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
                         this.Invoke(() =>
                         {
-                            lblLeftCount.Text =arenaInfo.DailyChallengeCount.ToString();
+                            lblLeftCount.Text = arenaInfo.DailyChallengeCount.ToString();
                             lblWin.Text = $"{arenaInfo.ArenaRecord.Win}/{arenaInfo.ArenaRecord.Lose}";
-                            lblScore.Text =arenaInfo.Score.ToString();
+                            lblScore.Text = arenaInfo.Score.ToString();
                             lblRank.Text = index.ToString();
 
                         });
                     }
-                    if (arenaInfo!=null&&arenaInfo.DailyChallengeCount <= 0)
-                    {
-                        log.Info("DailyChallengeEnd Avatar:{0}", avatar.AvatarAddress);
-                        challengeEnd=true;
-                    }
-                    else
-                    {
-                        //delay 2000 blocks
-                        if ((_topBlock.Index - _resetIndex) < 2200)
-                         {
-                            return;
-                        }
-                        action.weeklyArenaAddress = address;
-
-                        var up = 200;
-                        var low = 10;
-                        var max = 800;
-
-                        var rank = _avatarSettings[avatar.AvatarAddress].Rank;
-
-                        if (rank > 0&&index>rank)
-                        {
-                            up = index - rank < up ? up : index - rank;
-                        }
-                        else
-                        {
-                            if (index > up * 2)
-                            {
-                                up = index / 2;
-                            }
-                            else if (index < up && index > 0)
-                            {
-                                up = index;
-                            }
-                        }
-                        low = max - up;
-                     
-                        var infos2 = weeklyArenaState.GetArenaInfos(avatarAddress, up, low).Select(x=>x.arenaInfo);
-                        // Player does not play prev & this week arena.
-                        if (!infos2.Any() && weeklyArenaState.OrderedArenaInfos.Any())
-                        {
-                            var last = weeklyArenaState.OrderedArenaInfos.Last().AvatarAddress;
-                            infos2 =weeklyArenaState.GetArenaInfos(last, 90, 0).Select(x => x.arenaInfo);
-                        }
-
-                       // var infos2 = weeklyArenaState.OrderedArenaInfos;
-
-                        Address enemyAddress = default(Address);
-                        int minCP = int.MaxValue;
-                        foreach (var info in infos2) //auto match
-                        {
-                            if (!info.Active)
-                                continue;
-                            int cp;
-
-                            if (_cps.ContainsKey(info.AvatarAddress))
-                            {
-                                cp = _cps[info.AvatarAddress];
-                            }
-                            else
-                            {
-                                var avatarState = (await GetAvatayrStates(new List<Address>() { info.AvatarAddress })).FirstOrDefault().Value;
-                                cp = GetCP(avatarState);
-                                _cps[info.AvatarAddress] = cp; //cache cp
-                            }
-
-                            if (_cps[avatarAddress] >= cp * 1.2)
-                            {
-                                enemyAddress = info.AvatarAddress;
-                                break;
-                            }
-                            if (cp < minCP)
-                            {
-                                minCP = cp;
-                                enemyAddress = info.AvatarAddress;
-                            }
-                        }
-                        if (enemyAddress != default(Address))
-                        {
-                            action.enemyAddress = enemyAddress;
-                            action.costumeIds = _avatars[avatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList();
-                            action.equipmentIds = _avatars[avatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList();
-
-                            TryRankingBattle(action);
-                        }
-
-                    }
-                }
-                else
-                {
-                    log.Warn("WeeklyArenaState is null");
+                    callback?.Invoke(address, weeklyArenaState, index, arenaInfo);
+                    return true;
                 }
             }
-
+            return false;
         }
-       
 
         public async Task<Dictionary<Address, AvatarState>> GetAvatayrStates(IEnumerable<Address> addressList)
         {
@@ -626,9 +641,23 @@ namespace LieDown
             return (int)Math.Ceiling((double)stageId / d);
         
         }
+
+        private async void btnRefresh_Click(object sender, EventArgs e)
+        {
+            btnRefresh.Enabled = false;
+            btnRefresh.Text = "loading";
+
+            if (!await GetWeeklyArenInfo(new Address(avatar.AvatarAddress.Remove(0, 2)), null)) 
+            {
+                MessageBox.Show("WeeklyArenaState is null.");
+            }
+
+            btnRefresh.Enabled= true;
+            btnRefresh.Text = "refresh";
+        }
     }
 
-   
+
 
     public class ClientFilter : IClientFilter
     {
