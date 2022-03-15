@@ -56,15 +56,38 @@ namespace LieDown
 
         public Main()
         {
-            InitializeComponent();
-            Node = Program.Nodes.Where(x => x.PreloadEnded).MinBy(x => x.PingDelay);
+            InitializeComponent();            
         }
 
         private async void Main_Load(object sender, EventArgs e)
         {
             btnSetting.Enabled = false;
             btnStart.Enabled = false;
-            ConnectRpc();
+            var testOK = false;
+            foreach (var node in Program.Nodes.Where(x => x.PreloadEnded).OrderBy(x => x.PingDelay))
+            {
+                Node = node;
+                ConnectRpc();
+                try
+                {
+                    await _service.GetTip();
+                    testOK = true;
+                    break;
+                }
+                catch
+                {
+                    await CloesRpc();
+                    await Task.Delay(1000);
+                }
+
+            }
+
+            if (!testOK) {
+                log.Error("No PRC node is valid auto restart!");
+                Program.Start();
+                Application.Exit();            
+            }
+
             _topBlock = await Node.GetBlockIndexAsync();
 
             if (await GetStateAsync(GameConfigState.Address) is Dictionary configDict)
@@ -116,8 +139,7 @@ namespace LieDown
             {
                 while (!this.Disposing)
                 {
-                    await Task.Delay(1000 * 60 * 3);
-
+                    await Task.Delay(1000 * 60);
                     try
                     {
                         await WeeklyArena();
@@ -305,6 +327,7 @@ namespace LieDown
 
         public async Task<Dictionary<Address, AvatarState>> GetAvatayrStates(IEnumerable<Address> addressList)
         {
+
             Dictionary<byte[], byte[]> raw =
                 await _service.GetAvatarStates(addressList.Select(a => a.ToByteArray()),
                     BlockHash.FromString(_topBlock.Hash).ToByteArray());
@@ -314,6 +337,7 @@ namespace LieDown
                 result[new Address(kv.Key)] = new AvatarState((Dictionary)_codec.Decode(kv.Value));
             }
             return result;
+
         }
 
 
@@ -328,10 +352,10 @@ namespace LieDown
                     new ChannelOption("grpc.max_receive_message_length", -1)
                   }
               );
-          
+            var filter = new ClientFilter(log);          
             _service = MagicOnionClient.Create<IBlockChainService>(_channel, new IClientFilter[]
             {
-                new ClientFilter(log)
+               filter
             }).WithCancellationToken(_channel.ShutdownToken);
         }
         private async Task CloesRpc()
@@ -369,10 +393,11 @@ namespace LieDown
                              ConnectRpc();
                      }
                      else  //切换节点
-                     {
+                     {  
+                         log.Warn("RPC Node Switch");
                          Node = Program.Nodes.Where(x => x.PreloadEnded).MinBy(x => x.PingDelay);
                          await CloesRpc();
-                         isNewConn = true;
+                         isNewConn = true;                       
                      }
                  });
             }
@@ -470,8 +495,44 @@ namespace LieDown
 
         public async Task<IValue> GetStateAsync(Address address)
         {
-            byte[] raw = await _service.GetState(address.ToByteArray(), BlockHash.FromString(_topBlock.Hash).ToByteArray());
-            return _codec.Decode(raw);
+            try
+            {
+                byte[] raw = await _service.GetState(address.ToByteArray(), BlockHash.FromString(_topBlock.Hash).ToByteArray());
+                return _codec.Decode(raw);
+            }
+            catch (System.InvalidOperationException)
+            {
+               var nodes = Program.Nodes.Where(x => x.PreloadEnded).ToList();
+                ReConn:
+                await CloesRpc();
+                var host = Node.Host;
+                nodes.RemoveAll(x => x.Host == host);
+                if (nodes.Count == 0) 
+                {
+                    await Task.Delay(1000 * 60 * 5);
+                    Program.Start();
+                    Application.Exit();
+                    return null;
+
+                }
+                Node = nodes.First();
+                ConnectRpc();
+
+                try
+                {
+                   await _service.GetTip();    
+                }              
+                catch (Exception) 
+                {
+                    await Task.Delay(1000 * 30);
+                    goto ReConn;  
+                }
+
+                return null;
+            }
+            catch (Exception){
+                throw;
+            }
         }
 
 
@@ -665,7 +726,7 @@ namespace LieDown
         public ClientFilter(NLog.Logger log)
         {
             this._log = log;
-        }
+        }       
 
         public async ValueTask<ResponseContext> SendAsync(RequestContext context, Func<RequestContext, ValueTask<ResponseContext>> next)
         {
@@ -683,8 +744,9 @@ namespace LieDown
                     retryCount++;    
                     _log.Error(e, $"ClientFilter error count:{retryCount}");                
                 }
-            }            
+            }           
             return null;
+            // todo switch node
         }
     }
 }

@@ -80,6 +80,10 @@ namespace LieDown
             }
 
             //auto restart
+            Start(); 
+        }
+
+        public static void Start() {
             if (PrivateKey != null)
             {
                 log.Info("Auto Restart");
@@ -87,11 +91,9 @@ namespace LieDown
                 var appName = Application.ExecutablePath;
                 Process ps = new Process();
                 ps.StartInfo.FileName = appName;
-                ps.StartInfo.Arguments = Libplanet.ByteUtil.Hex(PrivateKey.ToByteArray()) +" "+Agent.Address + " " +IsFighting.ToString();
+                ps.StartInfo.Arguments = Libplanet.ByteUtil.Hex(PrivateKey.ToByteArray()) + " " + Agent.Address + " " + IsFighting.ToString();
                 ps.Start();
-            }           
-
-
+            }
         }
 
         private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
