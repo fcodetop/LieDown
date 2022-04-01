@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Libplanet;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -30,15 +31,29 @@ namespace LieDown.Modles
         [Newtonsoft.Json.JsonIgnore]
         public int CP { get; set; }
 
-        public class ColletionMap { 
-        
+        Address _address;
+        public Address Address
+        {
+            get
+            {
+                if (_address == default(Address))
+                {
+                    _address = new Address(AvatarAddress.Remove(0, 2));
+                }
+                return _address;
+            }
+        }
+
+        public class ColletionMap
+        {
+
             public int Count { get; set; }
             public int[][] Pairs { get; set; }
         }
 
-        public async static Task<Character> GetCharacterAync(NodeInfo node,string avatarAddress) 
-        {           
-           var wrap = await HttpUtils.PostAsync<StateQueryWrap>(node.GraphqlServer, "{\"query\":\"query{stateQuery{avatar(avatarAddress:\\\""+ avatarAddress + "\\\"){actionPoint,address,agentAddress,name,level,exp,dailyRewardReceivedIndex,updatedAt,stageMap{count,pairs}}}}\"}");
+        public async static Task<Character> GetCharacterAync(NodeInfo node, string avatarAddress)
+        {
+            var wrap = await HttpUtils.PostAsync<StateQueryWrap>(node.GraphqlServer, "{\"query\":\"query{stateQuery{avatar(avatarAddress:\\\"" + avatarAddress + "\\\"){actionPoint,address,agentAddress,name,level,exp,dailyRewardReceivedIndex,updatedAt,stageMap{count,pairs}}}}\"}");
             return wrap.StateQuery.Avatar;
         }
 
