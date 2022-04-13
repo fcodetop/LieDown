@@ -11,6 +11,7 @@ using Nekoyume.Action;
 using Nekoyume.Model.State;
 using Nekoyume.Shared.Services;
 using Nekoyume.TableData;
+using Nekoyume.UI.Model;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -328,7 +329,7 @@ namespace LieDown
             }
 
         }
-
+        ArenaInfoList _arenaInfoList=new ArenaInfoList();
         private async Task<bool> GetWeeklyArenInfo(IEnumerable<Address> avatarAddresses, Action<Address,WeeklyArenaState, int, ArenaInfo> callback)
         {
             if (_arenaHelper.TryGetThisWeekAddress(_topBlock.Index, out var address))
@@ -337,16 +338,46 @@ namespace LieDown
                 if (state != null)
                 {
                     var weeklyArenaState = new WeeklyArenaState(state);
+                    _arenaInfoList.Update(weeklyArenaState, false);
                     _resetIndex = weeklyArenaState.ResetIndex;
+
+                    var rawList =
+                   await GetStateAsync(
+                       weeklyArenaState.address.Derive("address_list"));
+                    if (rawList is List list)
+                    {
+                        List<Address> avatarAddressList = list.ToList(StateExtensions.ToAddress);
+                        List<Address> arenaInfoAddressList = new List<Address>();
+                        foreach (var avatarAddress in avatarAddressList)
+                        {
+                            var arenaInfoAddress = weeklyArenaState.address.Derive(avatarAddress.ToByteArray());
+                            if (!arenaInfoAddressList.Contains(arenaInfoAddress))
+                            {
+                                arenaInfoAddressList.Add(arenaInfoAddress);
+                            }
+                        }
+                        Dictionary<Address, IValue> result = await GetStateBulkAsync(arenaInfoAddressList);
+                        var infoList = new List<ArenaInfo>();
+                        foreach (var iValue in result.Values)
+                        {
+                            if (iValue is Dictionary dictionary)
+                            {
+                                var info = new ArenaInfo(dictionary);                              
+                                infoList.Add(info);
+                            }
+                        }
+                       
+                        _arenaInfoList.Update(infoList);
+                    }
 
                     foreach (var avatarAddress in avatarAddresses)
                     {
 
                         var index = -1;
-                        var arenaInfo = weeklyArenaState.GetArenaInfo(avatarAddress);
+                        var arenaInfo = _arenaInfoList[avatarAddress];
                         if (arenaInfo != null)
                         {
-                            index = weeklyArenaState.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
+                            index = _arenaInfoList.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
 
                             if (_avatarCtrls.TryGetValue(avatarAddress, out var avatarCtrl))
                             {
@@ -573,6 +604,19 @@ namespace LieDown
             catch (Exception){
                 throw;
             }
+        }
+
+        public async Task<Dictionary<Address, IValue>> GetStateBulkAsync(IEnumerable<Address> addressList)
+        {
+            Dictionary<byte[], byte[]> raw =
+                await _service.GetStateBulk(addressList.Select(a => a.ToByteArray()),
+                   BlockHash.FromString(_topBlock.Hash).ToByteArray());
+            var result = new Dictionary<Address, IValue>();
+            foreach (var kv in raw)
+            {
+                result[new Address(kv.Key)] = _codec.Decode(kv.Value);
+            }
+            return result;
         }
 
 

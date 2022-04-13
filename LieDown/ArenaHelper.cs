@@ -20,10 +20,10 @@ namespace Nekoyume
 
         public  bool TryGetThisWeekAddress(long blockIndex, out Address weeklyArenaAddress)
         {
-            var index = (int) blockIndex / gameConfigState.WeeklyArenaInterval;
+            var index = (int)blockIndex / gameConfigState.WeeklyArenaInterval;
             if (index < 0)
             {
-                weeklyArenaAddress=new Address();
+                weeklyArenaAddress = new Address();
                 return false;
             }
 
