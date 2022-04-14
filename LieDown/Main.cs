@@ -233,13 +233,13 @@ namespace LieDown
             if (!await GetWeeklyArenInfo(Program.Agent.AvatarStates.Select(x=>x.Address),
                   async (address, weeklyArenaState, index, arenaInfo) =>
                {
-                   if (arenaInfo != null && arenaInfo.DailyChallengeCount <= 0)
-                   {
-                       log.Info("DailyChallengeEnd Avatar:{0}", arenaInfo.AvatarAddress);
-                       challengeEnd = true;
-                   }
-                   else
-                   {
+                   //if (arenaInfo != null && arenaInfo.DailyChallengeCount <= 0)
+                   //{
+                   //    log.Info("DailyChallengeEnd Avatar:{0}", arenaInfo.AvatarAddress);
+                   //    challengeEnd = true;
+                   //}
+                   //else
+                   //{
                         //delay 2600 blocks
                         if ((_topBlock.Index - _resetIndex) < delayIndex)
                        {
@@ -320,7 +320,7 @@ namespace LieDown
                            TryRankingBattle(action);
                        }
 
-                   }
+                  // }
 
                }))
             {
@@ -369,7 +369,7 @@ namespace LieDown
                        
                         _arenaInfoList.Update(infoList);                       
                     }
-
+                    challengeEnd=true;
                     foreach (var avatarAddress in avatarAddresses)
                     {
 
@@ -398,7 +398,10 @@ namespace LieDown
                         {
                             arenaInfo = new ArenaInfo(_avatars[avatarAddress], _characterSheet, true);
                         }
-                        callback?.Invoke(address, _arenaInfoList, index, arenaInfo);
+                        var isEnd = arenaInfo.DailyChallengeCount <= 0;
+                        challengeEnd = challengeEnd & isEnd;
+                        if (!isEnd)
+                            callback?.Invoke(address, _arenaInfoList, index, arenaInfo);
                     }
                     return true;
                 }
