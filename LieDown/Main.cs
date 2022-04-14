@@ -330,7 +330,7 @@ namespace LieDown
 
         }
         ArenaInfoList _arenaInfoList=new ArenaInfoList();
-        private async Task<bool> GetWeeklyArenInfo(IEnumerable<Address> avatarAddresses, Action<Address,WeeklyArenaState, int, ArenaInfo> callback)
+        private async Task<bool> GetWeeklyArenInfo(IEnumerable<Address> avatarAddresses, Action<Address, ArenaInfoList, int, ArenaInfo> callback)
         {
             if (_arenaHelper.TryGetThisWeekAddress(_topBlock.Index, out var address))
             {               
@@ -367,7 +367,7 @@ namespace LieDown
                             }
                         }
                        
-                        _arenaInfoList.Update(infoList);
+                        _arenaInfoList.Update(infoList);                       
                     }
 
                     foreach (var avatarAddress in avatarAddresses)
@@ -398,7 +398,7 @@ namespace LieDown
                         {
                             arenaInfo = new ArenaInfo(_avatars[avatarAddress], _characterSheet, true);
                         }
-                        callback?.Invoke(address, weeklyArenaState, index, arenaInfo);
+                        callback?.Invoke(address, _arenaInfoList, index, arenaInfo);
                     }
                     return true;
                 }
