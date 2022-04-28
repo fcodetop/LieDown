@@ -21,7 +21,7 @@ namespace LieDown
         private async void Login_Load(object sender, EventArgs e)
         {
 
-            if (null!= Program.PrivateKey) 
+            if ((Program.PrivateKey?.Equals(null)).HasValue) 
             {
                 foreach (Control c in this.Controls) {
                     c.Enabled = false;

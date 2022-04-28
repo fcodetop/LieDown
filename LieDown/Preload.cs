@@ -43,7 +43,7 @@ namespace LieDown
                          }
                          else
                          {
-                             if (Program.PrivateKey != null) //delay and retry
+                             if ((Program.PrivateKey?.Equals(null)).HasValue)  //delay and retry
                              {
                                  await Task.Delay(1000 * 60 * 5);
                                  retry = true;

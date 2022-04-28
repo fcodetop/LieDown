@@ -83,15 +83,16 @@ namespace LieDown
             Start(); 
         }
 
-        public static void Start() {
-            if (PrivateKey != null)
+        public static void Start()
+        {
+            if ((Program.PrivateKey?.Equals(null)).HasValue)
             {
                 log.Info("Auto Restart");
 
                 var appName = Application.ExecutablePath;
                 Process ps = new Process();
                 ps.StartInfo.FileName = appName;
-                ps.StartInfo.Arguments = Libplanet.ByteUtil.Hex(PrivateKey.ToByteArray()) + " " + Agent.Address + " " + string.Join(",",FightingList);
+                ps.StartInfo.Arguments = Libplanet.ByteUtil.Hex(PrivateKey.ToByteArray()) + " " + Agent.Address + " " + string.Join(",", FightingList);
                 ps.Start();
             }
         }
