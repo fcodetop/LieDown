@@ -699,7 +699,7 @@ namespace LieDown
             await MakeTransaction(actions);
         }
 
-        public async Task<bool> TryHackAndSlash(int stageId, int playCount, Address avatarAddress)
+        public async Task<bool> TryHackAndSlash(int stageId, Address avatarAddress)
         {
             var worldId = getWorldId(stageId);
 
@@ -710,7 +710,7 @@ namespace LieDown
                 foods = new List<Guid>(),
                 worldId = worldId,
                 stageId = stageId,
-                playCount = playCount,
+               // playCount = playCount,
                 avatarAddress = avatarAddress,
             };
             var actions = new List<NCAction>() { action };
