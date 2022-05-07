@@ -699,20 +699,35 @@ namespace LieDown
             await MakeTransaction(actions);
         }
 
-        public async Task<bool> TryHackAndSlash(int stageId, Address avatarAddress)
+        public async Task<bool> TryHackAndSlash(int stageId,int playCount, Address avatarAddress)
         {
             var worldId = getWorldId(stageId);
-
-            var action = new HackAndSlash
+            NCAction action;
+            if (playCount > 1)
             {
-                costumes = _avatars[avatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList(),
-                equipments = _avatars[avatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList(),
-                foods = new List<Guid>(),
-                worldId = worldId,
-                stageId = stageId,
-               // playCount = playCount,
-                avatarAddress = avatarAddress,
-            };
+                action = new HackAndSlashSweep
+                {
+                    worldId = worldId,
+                    stageId = stageId,                   
+                    avatarAddress = avatarAddress,
+                };
+            }
+            else
+            {
+
+                action = new HackAndSlash
+                {
+                    costumes = _avatars[avatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList(),
+                    equipments = _avatars[avatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList(),
+                    foods = new List<Guid>(),
+                    worldId = worldId,
+                    stageId = stageId,
+                    // playCount = playCount,
+                    avatarAddress = avatarAddress,
+                };
+            }
+
+            
             var actions = new List<NCAction>() { action };
             if (_StageTxs.ContainsKey(GetHashCode(actions)))
             {

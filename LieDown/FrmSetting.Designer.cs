@@ -83,10 +83,10 @@
             this.rbBootstrap.AutoSize = true;
             this.rbBootstrap.Location = new System.Drawing.Point(90, 22);
             this.rbBootstrap.Name = "rbBootstrap";
-            this.rbBootstrap.Size = new System.Drawing.Size(84, 21);
+            this.rbBootstrap.Size = new System.Drawing.Size(64, 21);
             this.rbBootstrap.TabIndex = 100;
             this.rbBootstrap.TabStop = true;
-            this.rbBootstrap.Text = "Bootstrap";
+            this.rbBootstrap.Text = "Sweep";
             this.rbBootstrap.UseVisualStyleBackColor = true;
             // 
             // rbProgress

@@ -15,7 +15,7 @@ using NCAction = Libplanet.Action.PolymorphicAction<Nekoyume.Action.ActionBase>;
 
 namespace LieDown
 {
-    public delegate  Task<bool> TryHackAndSlash(int stageId,  Address avatarAddress);
+    public delegate  Task<bool> TryHackAndSlash(int stageId,int playCount, Address avatarAddress);
 
     public partial class Avatar : UserControl
     {
@@ -121,6 +121,7 @@ namespace LieDown
                             if (AvatarSetting.Mode == Modles.SlashMode.Bootstrap)
                             {
                                 stageId = AvatarSetting.Stage;
+
                                 if (stageId > Character.StageId)
                                 {
 
@@ -128,11 +129,15 @@ namespace LieDown
                                     btnStart_Click(sender, e);
                                     break;
                                 }
+
                                 playCount = Character.ActionPoint / 5;
-                                playCount = playCount > 8 ? 8 : playCount; //max 8
+                                if (Character.StageId == stageId) 
+                                {
+                                    playCount = 1;
+                                }
                             }
 
-                            if (TryHackAndSlash!=null&&! await TryHackAndSlash(stageId, Character.Address )) {
+                            if (TryHackAndSlash!=null&&! await TryHackAndSlash(stageId,playCount, Character.Address )) {
                                 continue;
                             }
 
