@@ -750,13 +750,8 @@ namespace LieDown
             _avatars = await GetAvatayrStates(Program.Agent.AvatarStates.Select(x => x.Address));
             foreach (var state in _avatars)
             {
-                _cps[state.Key] = GetCP(state.Value);
-                var addr = state.Key.ToString();              
-
-                var avatar = Program.Agent.AvatarStates.First(x => x.AvatarAddress == addr);
-
+                _cps[state.Key] = GetCP(state.Value);           
                 Avatar avatarc = _avatarCtrls[avatar.Address];
-                avatarc.Character = avatar;
                 avatarc.BindAvatar(_cps[avatar.Address], _topBlock);
             }
 
