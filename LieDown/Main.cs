@@ -285,8 +285,8 @@ namespace LieDown
                        int minCP = int.MaxValue;
                        foreach (var info in infos2) //auto match
                         {
-                           if (!info.Active)
-                               continue;
+                           //if (!info.Active)
+                           //    continue;
                            int cp;
 
                            if (_cps.ContainsKey(info.AvatarAddress))
