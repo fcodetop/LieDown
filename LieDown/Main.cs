@@ -708,8 +708,11 @@ namespace LieDown
                 action = new HackAndSlashSweep
                 {
                     worldId = worldId,
-                    stageId = stageId,                   
+                    stageId = stageId,
                     avatarAddress = avatarAddress,
+                    costumes = _avatars[avatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList(),
+                    equipments = _avatars[avatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList(),
+                    actionPoint = playCount * 5
                 };
             }
             else
