@@ -131,10 +131,10 @@ namespace LieDown
                                 }
 
                                 playCount = Character.ActionPoint / 5;
-                                if (Character.StageId == stageId) 
-                                {
-                                    playCount = 1;
-                                }
+                                //if (Character.StageId == stageId) 
+                                //{
+                                //    playCount = 1;
+                                //}
                             }
 
                             if (TryHackAndSlash!=null&&! await TryHackAndSlash(stageId,playCount, Character.Address )) {
