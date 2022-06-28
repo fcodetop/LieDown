@@ -163,23 +163,23 @@ namespace LieDown
                   }
               });
             task.Start();
-            var task1 = new Task(async () =>
-            {
-                while (!this.Disposing)
-                {
-                    await Task.Delay(1000 * 60);
-                    try
-                    {
-                        await WeeklyArena();
-                    }
-                    catch (Exception ex) 
-                    { 
-                        log.Error(ex, "WeeklyArena error");
-                    }
+            //var task1 = new Task(async () =>
+            //{
+            //    while (!this.Disposing)
+            //    {
+            //        await Task.Delay(1000 * 60);
+            //        try
+            //        {
+            //            await WeeklyArena();
+            //        }
+            //        catch (Exception ex) 
+            //        { 
+            //            log.Error(ex, "WeeklyArena error");
+            //        }
 
-                }
-            });
-            task1.Start();
+            //    }
+            //});
+            //task1.Start();
 
             foreach (var addr in Program.FightingList) 
             {
