@@ -8,10 +8,12 @@ using Libplanet.Tx;
 using LieDown.Modles;
 using MagicOnion.Client;
 using Nekoyume.Action;
+using Nekoyume.Model.Arena;
+using Nekoyume.Model.EnumType;
+using Nekoyume.Model.Item;
 using Nekoyume.Model.State;
 using Nekoyume.Shared.Services;
 using Nekoyume.TableData;
-using Nekoyume.UI.Model;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -44,6 +46,7 @@ namespace LieDown
 
         private CharacterSheet _characterSheet = new CharacterSheet();
         private CostumeStatSheet _costumeStatSheet = new CostumeStatSheet();
+        private ArenaSheet _arenaSheet = new ArenaSheet();
 
         private Nekoyume.ArenaHelper _arenaHelper;
 
@@ -94,10 +97,12 @@ namespace LieDown
             if (await GetStateAsync(GameConfigState.Address) is Dictionary configDict)
             {
                 GameConfigState = new GameConfigState(configDict);
+                _defaultDelayIndex = GameConfigState.DailyArenaInterval - 400;
             }
 
             var characterSheetAddr = Nekoyume.Addresses.GetSheetAddress<CharacterSheet>();
             var costumeStatSheetAddr = Nekoyume.Addresses.GetSheetAddress<CostumeStatSheet>();
+            var sheetAddr = Nekoyume.Addresses.GetSheetAddress<ArenaSheet>();
 
             var csv = await GetStateAsync(characterSheetAddr);
             _characterSheet.Set(csv.ToDotnetString());
@@ -105,6 +110,8 @@ namespace LieDown
             csv = await GetStateAsync(costumeStatSheetAddr);
             _costumeStatSheet.Set(csv.ToDotnetString());
 
+            csv = await GetStateAsync(sheetAddr);
+            _arenaSheet.Set(csv.ToDotnetString());
 
             _avatars = await GetAvatayrStates(Program.Agent.AvatarStates.Select(x => x.Address));
 
@@ -163,23 +170,23 @@ namespace LieDown
                   }
               });
             task.Start();
-            //var task1 = new Task(async () =>
-            //{
-            //    while (!this.Disposing)
-            //    {
-            //        await Task.Delay(1000 * 60);
-            //        try
-            //        {
-            //            await WeeklyArena();
-            //        }
-            //        catch (Exception ex) 
-            //        { 
-            //            log.Error(ex, "WeeklyArena error");
-            //        }
+            var task1 = new Task(async () =>
+            {
+                while (!this.Disposing)
+                {
+                    await Task.Delay(1000 * 60);
+                    try
+                    {
+                        await WeeklyArena();
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error(ex, "WeeklyArena error");
+                    }
 
-            //    }
-            //});
-            //task1.Start();
+                }
+            });
+            task1.Start();
 
             foreach (var addr in Program.FightingList) 
             {
@@ -194,12 +201,20 @@ namespace LieDown
         }
 
         public int GetCP( AvatarState avatarState)
-        {           
+        {
+            if (avatarState == null) 
+            { 
+            
+                return int.MaxValue;
+            }
+            
             return Nekoyume.Battle.CPHelper.GetCPV2(avatarState, _characterSheet, _costumeStatSheet);
         }
 
 
         private long _resetIndex=0;
+        private long _endIndex = 0;
+        private long _defaultDelayIndex=2600;
         private bool challengeEnd=false;
 
         private async Task WeeklyArena()
@@ -214,199 +229,367 @@ namespace LieDown
                 return;
             }
 
-           //todo every avatar
-            var delayIndex = _avatarSettings[Program.Agent.AvatarStates.MaxBy(x=>x.Level).AvatarAddress].RankingBattleBlockIndex;
 
-            delayIndex = delayIndex == 0 ? 2600 : delayIndex;
+            //todo every avatar
+            var delayIndex = _avatarSettings[Program.Agent.AvatarStates.MaxBy(x => x.Level).AvatarAddress].RankingBattleBlockIndex;
+
+            delayIndex = delayIndex == 0 ? (int)_defaultDelayIndex : delayIndex;
 
             //delay 2600 blocks
             if (_topBlock.Index - _resetIndex < delayIndex)
             {
                 return;
-            }           
-            var action = new RankingBattle();
+            }
+
+            var action = new BattleArena();
             if (_StageTxs.ContainsKey(GetHashCode(new List<NCAction>() { action })))
             {
                 return;
             }
 
-            if (!await GetWeeklyArenInfo(Program.Agent.AvatarStates.Select(x=>x.Address),
-                  async (address, weeklyArenaState, index, arenaInfo) =>
+            await GetWeeklyArenInfo(Program.Agent.AvatarStates.Select(x => x.Address), async (address, arenalist, arenaInfo, currentRoundData) =>
+           {
+
+               if ((_topBlock.Index - _resetIndex) < delayIndex)
                {
-                   //if (arenaInfo != null && arenaInfo.DailyChallengeCount <= 0)
-                   //{
-                   //    log.Info("DailyChallengeEnd Avatar:{0}", arenaInfo.AvatarAddress);
-                   //    challengeEnd = true;
-                   //}
-                   //else
-                   //{
-                        //delay 2600 blocks
-                        if ((_topBlock.Index - _resetIndex) < delayIndex)
+                   return;
+               }
+               Address enemyAddress = default(Address);
+               int minCP = int.MaxValue;
+               foreach (var info in arenalist)
+               {
+                   int cp;
+                   if (_cps.ContainsKey(info.AvatarAddress))
+                   {
+                       cp = _cps[info.AvatarAddress];
+                   }
+                   else
+                   {
+                       var addrBulk = new[]
                        {
-                           return;
-                       }
-                        var avatarAddress= arenaInfo.AvatarAddress;
-                       action.weeklyArenaAddress = address;
-                       action.avatarAddress = avatarAddress;
-                       var up = 200;
-                       var low = 10;
-                       var max = 800;
+                    info.AvatarAddress,
+                    info.AvatarAddress.Derive(Lib9c.SerializeKeys.LegacyInventoryKey),
+                    ArenaAvatarState.DeriveAddress(info.AvatarAddress)
+                       };
+                       var stateBulk = await GetStateBulkAsync(addrBulk);
 
-                       var rank = _avatarSettings[avatarAddress.ToString()].Rank;
-
-                       if (rank > 0 && index > rank)
+                       var avatar = stateBulk[addrBulk[0]] is Dictionary avatarDict
+                           ? new AvatarState(avatarDict)
+                           : null;
+                       var inventory =
+                           stateBulk[addrBulk[1]] is List inventoryList
+                               ? new Nekoyume.Model.Item.Inventory(inventoryList)
+                               : null;
+                       if (avatar is { })
                        {
-                           up = index - rank < up ? up : index - rank;
-                       }
-                       else
-                       {
-                           if (index > up * 2)
-                           {
-                               up = index / 2;
-                           }
-                           else if (index < up && index > 0)
-                           {
-                               up = index;
-                           }
-                       }
-                       low = max - up;
-
-                       var infos2 = weeklyArenaState.GetArenaInfos(avatarAddress, up, low).Select(x => x.arenaInfo);
-                        // Player does not play prev & this week arena.
-                        if (!infos2.Any() && weeklyArenaState.OrderedArenaInfos.Any())
-                       {
-                           var last = weeklyArenaState.OrderedArenaInfos.Last().AvatarAddress;
-                           infos2 = weeklyArenaState.GetArenaInfos(last, 90, 0).Select(x => x.arenaInfo);
+                           avatar.inventory = inventory;
                        }
 
-                        // var infos2 = weeklyArenaState.OrderedArenaInfos;
+                       var arenaAvatar =
+                           stateBulk[addrBulk[2]] is List arenaAvatarList
+                               ? new ArenaAvatarState(arenaAvatarList)
+                               : null;
+                       if (avatar != null && arenaAvatar != null)
+                           avatar.inventory = InventoryApply(avatar.inventory, arenaAvatar);
 
-                        Address enemyAddress = default(Address);
-                       int minCP = int.MaxValue;
-                       foreach (var info in infos2) //auto match
-                        {
-                           //if (!info.Active)
-                           //    continue;
-                           int cp;
+                       cp = GetCP(avatar);
+                       _cps[info.AvatarAddress] = cp; //cache cp
+                   }
 
-                           if (_cps.ContainsKey(info.AvatarAddress))
-                           {
-                               cp = _cps[info.AvatarAddress];
-                           }
-                           else
-                           {
-                               var avatarState = (await GetAvatayrStates(new List<Address>() { info.AvatarAddress })).FirstOrDefault().Value;
-                               cp = GetCP(avatarState);
-                               _cps[info.AvatarAddress] = cp; //cache cp
-                            }
+                   if (_cps[address] >= cp * 1.2)
+                   {
+                       enemyAddress = info.AvatarAddress;
+                       break;
+                   }
+                   if (cp < minCP)
+                   {
+                       minCP = cp;
+                       enemyAddress = info.AvatarAddress;
+                   }
+               }
+               if (enemyAddress != default(Address))
+               {
+                   action.myAvatarAddress = address;
+                   action.enemyAvatarAddress = enemyAddress;
+                   action.costumes = _avatars[address].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+                   action.equipments = _avatars[address].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+                   action.championshipId = currentRoundData.ChampionshipId;
+                   action.round = currentRoundData.Round;
+                   action.ticket = 1;
+                   TryBattleArena(action);
+               }
 
-                           if (_cps[avatarAddress] >= cp * 1.2)
-                           {
-                               enemyAddress = info.AvatarAddress;
-                               break;
-                           }
-                           if (cp < minCP)
-                           {
-                               minCP = cp;
-                               enemyAddress = info.AvatarAddress;
-                           }
-                       }
-                       if (enemyAddress != default(Address))
-                       {
-                           action.enemyAddress = enemyAddress;
-                           action.costumeIds = _avatars[avatarAddress].inventory.Costumes.Where(i => i.equipped).Select(i => i.ItemId).ToList();
-                           action.equipmentIds = _avatars[avatarAddress].inventory.Equipments.Where(i => i.equipped).Select(i => i.ItemId).ToList();
+           });
+        }
 
-                           TryRankingBattle(action);
-                       }
-
-                  // }
-
-               }))
+        private async Task<bool> GetWeeklyArenInfo(IEnumerable<Address> avatarAddresses, Action<Address, List<Modles.ArenaInfo>, ArenaInformation, ArenaSheet.RoundData> callback)
+        {
+            var currentRoundData = _arenaSheet.GetRoundByBlockIndex(_topBlock.Index);
+            var participantsAddr = ArenaParticipants.DeriveAddress(
+                currentRoundData.ChampionshipId,
+                currentRoundData.Round);
+            _resetIndex = currentRoundData.StartBlockIndex;
+            _endIndex = currentRoundData.EndBlockIndex;
+            var participants
+                = await GetStateAsync(participantsAddr) is List participantsList
+                    ? new ArenaParticipants(participantsList)
+                    : null;
+            if (participants == null)
             {
-
-                log.Warn("WeeklyArenaState is null");
+                log.Warn($"participants is null at tip index{_topBlock.Index}");
+                return false;
             }
+
+            foreach (var addr in avatarAddresses)
+            {
+                var addr1 = participants.AvatarAddresses.FirstOrDefault(x => x == addr);
+                Debug.WriteLine(addr1);
+            }
+
+            avatarAddresses = avatarAddresses.Where(x => participants.AvatarAddresses.Any(y => y == x));
+            if (!avatarAddresses.Any())
+            {
+                return false;
+            }
+
+            var avatarAddrList = participants.AvatarAddresses;
+            var avatarAndScoreAddrList = avatarAddrList
+                .Select(avatarAddr => (
+                    avatarAddr,
+                    ArenaScore.DeriveAddress(
+                        avatarAddr,
+                        currentRoundData.ChampionshipId,
+                        currentRoundData.Round)))
+                .ToArray();
+
+            var scores = await GetStateBulkAsync(
+              avatarAndScoreAddrList.Select(tuple => tuple.Item2));
+            var avatarAddrAndScores = avatarAndScoreAddrList
+                .Select(tuple =>
+                {
+                    var (avatarAddr, scoreAddr) = tuple;
+                    return (
+                        avatarAddr,
+                        scores[scoreAddr] is List scoreList
+                            ? (int)(Integer)scoreList[1]
+                            : ArenaScore.ArenaScoreDefault
+                    );
+                })
+                .ToList();
+            var avatarAddrAndScoresWithRank =
+              AddRank(avatarAddrAndScores);
+            challengeEnd = true;
+            foreach (var addr in avatarAddresses)
+            {
+                var playerTuple = avatarAddrAndScoresWithRank.First(tuple =>
+                    tuple.avatarAddr.Equals(addr));
+
+
+                var playerArenaInfoAddr = ArenaInformation.DeriveAddress(
+               addr,
+               currentRoundData.ChampionshipId,
+               currentRoundData.Round);
+
+
+                var infoSate = await GetStateAsync(playerArenaInfoAddr) as List;
+
+                var playerArenaInfo = infoSate == null ? null : new ArenaInformation(infoSate);
+
+                if (_avatarCtrls.TryGetValue(addr, out var avatarCtrl))
+                {
+                    avatarCtrl.BindArenaInfo(playerTuple.rank, playerTuple.score, playerArenaInfo);
+                }
+                var isEnd = playerArenaInfo?.Ticket <= 0;
+                challengeEnd = challengeEnd & isEnd;               
+
+                if (!isEnd && callback != null)
+                {
+
+                   var boundsList = GetBoundsWithPlayerScore(avatarAddrAndScoresWithRank, currentRoundData.ArenaType, playerTuple.score);
+                   /***
+                    var addrBulk = boundsList
+                        .SelectMany(x => new[]
+                        {
+                    x.AvatarAddress,
+                    x.AvatarAddress.Derive(Lib9c.SerializeKeys.LegacyInventoryKey),
+                    ArenaAvatarState.DeriveAddress(x.AvatarAddress),
+                        })
+                        .ToList();
+                    var stateBulk = await GetStateBulkAsync(addrBulk);
+                    var arenaInfoList = avatarAddrAndScoresWithRank.Select(tuple =>
+                    {
+                        var (avatarAddr, score, rank) = tuple;
+                        var avatar = stateBulk[avatarAddr] is Dictionary avatarDict
+                            ? new AvatarState(avatarDict)
+                            : null;
+                        var inventory =
+                            stateBulk[avatarAddr.Derive(Lib9c.SerializeKeys.LegacyInventoryKey)] is List inventoryList
+                                ? new Nekoyume.Model.Item.Inventory(inventoryList)
+                                : null;
+                        if (avatar is { })
+                        {
+                            avatar.inventory = inventory;
+                        }
+
+                        var arenaAvatar =
+                            stateBulk[ArenaAvatarState.DeriveAddress(avatarAddr)] is List arenaAvatarList
+                                ? new ArenaAvatarState(arenaAvatarList)
+                                : null;
+                        if (avatar != null && arenaAvatar != null)
+                            avatar.inventory = InventoryApply(avatar.inventory, arenaAvatar);
+
+                        return new Modles.ArenaInfo()
+                        {
+                            AvatarAddress = avatarAddr,
+                            Score = score,
+                            Rank = rank,
+                            Avatar = avatar,
+                            CP = GetCP(avatar),
+                        };
+                    }).ToList();
+                   ***/
+                    callback(addr, boundsList, playerArenaInfo, currentRoundData);
+                }
+
+            }
+            return true;
 
         }
-        ArenaInfoList _arenaInfoList=new ArenaInfoList();
-        private async Task<bool> GetWeeklyArenInfo(IEnumerable<Address> avatarAddresses, Action<Address, ArenaInfoList, int, ArenaInfo> callback)
+
+        private  Inventory InventoryApply(
+            Inventory inventory,
+           ArenaAvatarState arenaAvatarState)
         {
-            if (_arenaHelper.TryGetThisWeekAddress(_topBlock.Index, out var address))
-            {               
-                var state = await GetStateAsync(address);
-                if (state != null)
+            var nonFungibleIdsToEquip = new List<Guid>(arenaAvatarState.Costumes);
+            nonFungibleIdsToEquip.AddRange(arenaAvatarState.Equipments);
+            foreach (var itemBase in inventory.Items.Select(e => e.item))
+            {
+                if (!(itemBase is IEquippableItem equippableItem))
                 {
-                    var weeklyArenaState = new WeeklyArenaState(state);
-                    _arenaInfoList.Update(weeklyArenaState, false);
-                    _resetIndex = weeklyArenaState.ResetIndex;
-
-                    var rawList =
-                   await GetStateAsync(
-                       weeklyArenaState.address.Derive("address_list"));
-                    if (rawList is List list)
-                    {
-                        List<Address> avatarAddressList = list.ToList(StateExtensions.ToAddress);
-                        List<Address> arenaInfoAddressList = new List<Address>();
-                        foreach (var avatarAddress in avatarAddressList)
-                        {
-                            var arenaInfoAddress = weeklyArenaState.address.Derive(avatarAddress.ToByteArray());
-                            if (!arenaInfoAddressList.Contains(arenaInfoAddress))
-                            {
-                                arenaInfoAddressList.Add(arenaInfoAddress);
-                            }
-                        }
-                        Dictionary<Address, IValue> result = await GetStateBulkAsync(arenaInfoAddressList);
-                        var infoList = new List<ArenaInfo>();
-                        foreach (var iValue in result.Values)
-                        {
-                            if (iValue is Dictionary dictionary)
-                            {
-                                var info = new ArenaInfo(dictionary);                              
-                                infoList.Add(info);
-                            }
-                        }
-                       
-                        _arenaInfoList.Update(infoList);                       
-                    }
-                    challengeEnd=true;
-                    foreach (var avatarAddress in avatarAddresses)
-                    {
-
-                        var index = -1;
-                        var arenaInfo = _arenaInfoList[avatarAddress];
-                        if (arenaInfo != null)
-                        {
-                            index = _arenaInfoList.OrderedArenaInfos.FindIndex(x => x.AvatarAddress.Equals(avatarAddress));
-
-                            if (_avatarCtrls.TryGetValue(avatarAddress, out var avatarCtrl))
-                            {
-                                avatarCtrl.BindArenaInfo(index, arenaInfo);
-                            }
-
-                            //this.Invoke(() =>
-                            //{
-                            //    lblLeftCount.Text = arenaInfo.DailyChallengeCount.ToString();
-                            //    lblWin.Text = $"{arenaInfo.ArenaRecord.Win}/{arenaInfo.ArenaRecord.Lose}";
-                            //    lblScore.Text = arenaInfo.Score.ToString();
-                            //    lblRank.Text = index.ToString();
-
-                            //});
-
-                        }
-                        else 
-                        {
-                            arenaInfo = new ArenaInfo(_avatars[avatarAddress], _characterSheet, true);
-                        }
-                        var isEnd = arenaInfo.DailyChallengeCount <= 0;
-                        challengeEnd = challengeEnd & isEnd;
-                        if (!isEnd)
-                            callback?.Invoke(address, _arenaInfoList, index, arenaInfo);
-                    }
-                    return true;
+                    continue;
                 }
+
+                if (!(itemBase is INonFungibleItem nonFungibleItem) ||
+                    !nonFungibleIdsToEquip.Contains(nonFungibleItem.NonFungibleId))
+                {
+                    equippableItem.Unequip();
+                    continue;
+                }
+
+                equippableItem.Equip();
+                nonFungibleIdsToEquip.Remove(nonFungibleItem.NonFungibleId);
             }
-            return false;
+
+            return inventory;
+        }
+
+        private List< (Address avatarAddr, int score, int rank)> AddRank(
+          List<(Address avatarAddr, int score)> tuples)
+        {
+            if (tuples.Count == 0)
+            {
+                return default;
+            }
+
+            var orderedTuples = tuples
+                .OrderByDescending(tuple => tuple.score)
+                .ThenBy(tuple => tuple.avatarAddr)
+                .Select(tuple => (tuple.avatarAddr, tuple.score, 0))
+                .ToArray();
+
+            var result = new List<(Address avatarAddr, int score, int rank)>();
+            var trunk = new List<(Address avatarAddr, int score, int rank)>();
+            int? currentScore = null;
+            var currentRank = 1;
+            for (var i = 0; i < orderedTuples.Length; i++)
+            {
+                var tuple = orderedTuples[i];
+                if (!currentScore.HasValue)
+                {
+                    currentScore = tuple.score;
+                    trunk.Add(tuple);
+                    continue;
+                }
+
+                if (currentScore.Value == tuple.score)
+                {
+                    trunk.Add(tuple);
+                    currentRank++;
+                    if (i < orderedTuples.Length - 1)
+                    {
+                        continue;
+                    }
+
+                    foreach (var tupleInTrunk in trunk)
+                    {
+                        result.Add((
+                            tupleInTrunk.avatarAddr,
+                            tupleInTrunk.score,
+                            currentRank));
+                    }
+
+                    trunk.Clear();
+
+                    continue;
+                }
+
+                foreach (var tupleInTrunk in trunk)
+                {
+                    result.Add((
+                        tupleInTrunk.avatarAddr,
+                        tupleInTrunk.score,
+                        currentRank));
+                }
+
+                trunk.Clear();
+                if (i < orderedTuples.Length - 1)
+                {
+                    trunk.Add(tuple);
+                    currentScore = tuple.score;
+                    currentRank++;
+                    continue;
+                }
+
+                result.Add((
+                    tuple.avatarAddr,
+                    tuple.score,
+                    currentRank + 1));
+            }
+
+            return result;
+        }
+
+        private  List<Modles.ArenaInfo> GetBoundsWithPlayerScore(
+           IEnumerable<(Address avatarAddr, int score, int rank)> tuples,
+           ArenaType arenaType,
+           int playerScore)
+        {
+            switch (arenaType)
+            {
+                case ArenaType.OffSeason:
+                    return tuples.Select(x=>new Modles.ArenaInfo
+                    {
+                        AvatarAddress = x.avatarAddr,
+                        Score = x.score,
+                        Rank = x.rank
+                    }).ToList();
+                case ArenaType.Season:
+                case ArenaType.Championship:
+                    var bounds = Nekoyume.Arena.ArenaHelper.ScoreLimits[arenaType];
+                    bounds = (bounds.Item1 + playerScore, bounds.Item2 + playerScore);
+                    return tuples
+                        .Where(tuple =>
+                            tuple.score <= bounds.Item1 &&
+                            tuple.score >= bounds.Item2)
+                        .Select(x => new Modles.ArenaInfo
+                            {
+                                AvatarAddress = x.avatarAddr,
+                                Score = x.score,
+                                Rank = x.rank
+                            }).ToList();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(arenaType), arenaType, null);
+            }
         }
 
         public async Task<Dictionary<Address, AvatarState>> GetAvatayrStates(IEnumerable<Address> addressList)
@@ -509,8 +692,8 @@ namespace LieDown
             {
                 lblBlockDev.Text = "";
                 lblBlock.Text = topBlock.ToString();
-                if (_resetIndex > 0)
-                    lblDailyBlock.Text = (topBlock - _resetIndex).ToString(); 
+                if (_endIndex > 0)
+                    lblDailyBlock.Text = (_endIndex- topBlock ).ToString(); 
             });
         }
 
@@ -689,7 +872,7 @@ namespace LieDown
 
         }
 
-        public async void TryRankingBattle(RankingBattle action)
+        public async void TryBattleArena(BattleArena action)
         {         
             var actions = new List<NCAction> { action };
             if (_StageTxs.ContainsKey(GetHashCode(actions)))
@@ -760,7 +943,7 @@ namespace LieDown
 
             if (!await GetWeeklyArenInfo(Program.Agent.AvatarStates.Select(x=>x.Address), null)) 
             {
-                MessageBox.Show("WeeklyArenaState is null.");
+                MessageBox.Show("Arena is null or have not join yet");
             }
 
             btnRefresh.Enabled= true;

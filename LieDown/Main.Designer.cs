@@ -103,11 +103,11 @@
             // lblDailyBlockt
             // 
             this.lblDailyBlockt.AutoSize = true;
-            this.lblDailyBlockt.Location = new System.Drawing.Point(376, 15);
+            this.lblDailyBlockt.Location = new System.Drawing.Point(351, 15);
             this.lblDailyBlockt.Name = "lblDailyBlockt";
-            this.lblDailyBlockt.Size = new System.Drawing.Size(77, 17);
+            this.lblDailyBlockt.Size = new System.Drawing.Size(98, 17);
             this.lblDailyBlockt.TabIndex = 23;
-            this.lblDailyBlockt.Text = "ArenaBlock:";
+            this.lblDailyBlockt.Text = "ArenaBlockLeft:";
             // 
             // Main
             // 
@@ -124,7 +124,7 @@
             this.Controls.Add(this.label11);
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "Main";
-            this.Text = "v100231";
+            this.Text = "v100241";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Main_FormClosed);
             this.Load += new System.EventHandler(this.Main_Load);
             this.ResumeLayout(false);

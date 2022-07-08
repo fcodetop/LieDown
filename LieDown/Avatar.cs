@@ -1,6 +1,7 @@
 ﻿using Libplanet;
 using LieDown.Modles;
 using Nekoyume.Action;
+using Nekoyume.Model.Arena;
 using Nekoyume.Model.State;
 using System;
 using System.Collections.Generic;
@@ -58,13 +59,13 @@ namespace LieDown
             });
         }
 
-        public void BindArenaInfo(int index, ArenaInfo arenaInfo) 
+        public void BindArenaInfo(int index,int score, ArenaInformation arenaInfo) 
         {
             this.Invoke(() =>
             {
-                lblLeftCount.Text = arenaInfo.DailyChallengeCount.ToString();
-                lblWin.Text = $"{arenaInfo.ArenaRecord.Win}/{arenaInfo.ArenaRecord.Lose}";
-                lblScore.Text = arenaInfo.Score.ToString();
+                lblLeftCount.Text = arenaInfo?.Ticket.ToString();
+                lblWin.Text = $"{arenaInfo?.Win}/{arenaInfo?.Lose}";
+                lblScore.Text = score.ToString();
                 lblRank.Text = index.ToString();
 
             });
@@ -98,7 +99,7 @@ namespace LieDown
             if (isFighting)
             {
                 lblFightStatus.Text = "Starting...";
-                Program.FightingList.Add(Character.AgentAddress);
+                Program.FightingList.Add(Character.AvatarAddress);
                 Task.Run(async () =>
                 {
                     while (isFighting)
@@ -168,7 +169,7 @@ namespace LieDown
             else
             {
                 lblFightStatus.Text = "Stopped";
-                Program.FightingList.Remove(Character.AgentAddress);
+                Program.FightingList.Remove(Character.AvatarAddress);
             }
 
         }
