@@ -59,11 +59,11 @@ namespace LieDown
             });
         }
 
-        public void BindArenaInfo(int index,int score, ArenaInformation arenaInfo) 
+        public void BindArenaInfo(int index,int score, ArenaInformation arenaInfo,int ticket) 
         {
             this.Invoke(() =>
             {
-                lblLeftCount.Text = arenaInfo?.Ticket.ToString();
+                lblLeftCount.Text = ticket.ToString();
                 lblWin.Text = $"{arenaInfo?.Win}/{arenaInfo?.Lose}";
                 lblScore.Text = score.ToString();
                 lblRank.Text = index.ToString();

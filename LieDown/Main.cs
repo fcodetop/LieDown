@@ -212,8 +212,7 @@ namespace LieDown
         }
 
 
-        private long _resetIndex=0;
-        private long _endIndex = 0;
+        private long _resetIndex=0;      
         private long _defaultDelayIndex=2600;
         private bool challengeEnd=false;
 
@@ -324,29 +323,24 @@ namespace LieDown
 
         private async Task<bool> GetWeeklyArenInfo(IEnumerable<Address> avatarAddresses, Action<Address, List<Modles.ArenaInfo>, ArenaInformation, ArenaSheet.RoundData> callback)
         {
-            var currentRoundData = _arenaSheet.GetRoundByBlockIndex(_topBlock.Index);
+            var currentRoundData = _arenaSheet.GetRoundByBlockIndex(_topBlock.Index); 
             var participantsAddr = ArenaParticipants.DeriveAddress(
                 currentRoundData.ChampionshipId,
                 currentRoundData.Round);
-            _resetIndex = currentRoundData.StartBlockIndex;
-            _endIndex = currentRoundData.EndBlockIndex;
+            _resetIndex = _topBlock.Index- (_topBlock.Index - currentRoundData.StartBlockIndex) % GameConfigState.DailyArenaInterval;
+
+
             var participants
-                = await GetStateAsync(participantsAddr) is List participantsList
+                = await GetStateAsync(participantsAddr) is List participantsList 
                     ? new ArenaParticipants(participantsList)
                     : null;
             if (participants == null)
             {
                 log.Warn($"participants is null at tip index{_topBlock.Index}");
                 return false;
-            }
+            }           
 
-            foreach (var addr in avatarAddresses)
-            {
-                var addr1 = participants.AvatarAddresses.FirstOrDefault(x => x == addr);
-                Debug.WriteLine(addr1);
-            }
-
-            avatarAddresses = avatarAddresses.Where(x => participants.AvatarAddresses.Any(y => y == x));
+            avatarAddresses = avatarAddresses.Where(x => participants.AvatarAddresses.Any(y => y == x)); 
             if (!avatarAddresses.Any())
             {
                 return false;
@@ -362,7 +356,7 @@ namespace LieDown
                         currentRoundData.Round)))
                 .ToArray();
 
-            var scores = await GetStateBulkAsync(
+            var scores = await GetStateBulkAsync(    
               avatarAndScoreAddrList.Select(tuple => tuple.Item2));
             var avatarAddrAndScores = avatarAndScoreAddrList
                 .Select(tuple =>
@@ -391,13 +385,15 @@ namespace LieDown
                currentRoundData.Round);
 
 
-                var infoSate = await GetStateAsync(playerArenaInfoAddr) as List;
+                var infoState = await GetStateAsync(playerArenaInfoAddr) as List;
 
-                var playerArenaInfo = infoSate == null ? null : new ArenaInformation(infoSate);
+                var playerArenaInfo = infoState == null ? null : new ArenaInformation(infoState);
+
+                var ticket = GetTicketCount(playerArenaInfo, _topBlock.Index, currentRoundData.StartBlockIndex, GameConfigState.DailyArenaInterval);
 
                 if (_avatarCtrls.TryGetValue(addr, out var avatarCtrl))
                 {
-                    avatarCtrl.BindArenaInfo(playerTuple.rank, playerTuple.score, playerArenaInfo);
+                    avatarCtrl.BindArenaInfo(playerTuple.rank, playerTuple.score, playerArenaInfo,ticket);
                 }
                 var isEnd = playerArenaInfo?.Ticket <= 0;
                 challengeEnd = challengeEnd & isEnd;               
@@ -448,12 +444,27 @@ namespace LieDown
                         };
                     }).ToList();
                    ***/
-                    callback(addr, boundsList, playerArenaInfo, currentRoundData);
+                  //  callback(addr, boundsList, playerArenaInfo, currentRoundData);
                 }
 
             }
             return true;
 
+        }
+
+        private int GetTicketCount(ArenaInformation arenaInfo,
+            long blockIndex,
+            long roundStartBlockIndex,
+            int gameConfigStateDailyArenaInterval)
+        {
+            var currentTicketResetCount = Nekoyume.Arena.ArenaHelper.GetCurrentTicketResetCount(
+                blockIndex,
+                roundStartBlockIndex,
+                gameConfigStateDailyArenaInterval);
+
+            return arenaInfo.TicketResetCount < currentTicketResetCount
+                ? ArenaInformation.MaxTicketCount
+                : arenaInfo.Ticket;
         }
 
         private  Inventory InventoryApply(
@@ -692,8 +703,8 @@ namespace LieDown
             {
                 lblBlockDev.Text = "";
                 lblBlock.Text = topBlock.ToString();
-                if (_endIndex > 0)
-                    lblDailyBlock.Text = (_endIndex- topBlock ).ToString(); 
+                if (_resetIndex > 0)
+                    lblDailyBlock.Text = (GameConfigState.DailyArenaInterval-(topBlock-_resetIndex )).ToString(); 
             });
         }
 
