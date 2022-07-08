@@ -444,7 +444,7 @@ namespace LieDown
                         };
                     }).ToList();
                    ***/
-                  //  callback(addr, boundsList, playerArenaInfo, currentRoundData);
+                    callback(addr, boundsList, playerArenaInfo, currentRoundData);
                 }
 
             }
