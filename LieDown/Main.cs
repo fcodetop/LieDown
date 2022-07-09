@@ -395,7 +395,7 @@ namespace LieDown
                 {
                     avatarCtrl.BindArenaInfo(playerTuple.rank, playerTuple.score, playerArenaInfo,ticket);
                 }
-                var isEnd = playerArenaInfo?.Ticket <= 0;
+                var isEnd = ticket <= 0;
                 challengeEnd = challengeEnd & isEnd;               
 
                 if (!isEnd && callback != null)
