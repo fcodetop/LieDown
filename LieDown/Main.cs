@@ -295,7 +295,7 @@ namespace LieDown
                        _cps[info.AvatarAddress] = cp; //cache cp
                    }
 
-                   if (_cps[address] >= cp * 1.2)
+                   if (_cps[address] >= cp * 1.25)
                    {
                        enemyAddress = info.AvatarAddress;
                        break;
